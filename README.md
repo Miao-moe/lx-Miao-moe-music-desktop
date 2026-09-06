@@ -1,215 +1,198 @@
-<p align="center"><a href="https://github.com/lyswhut/lx-music-desktop"><img width="200" src="https://github.com/lyswhut/lx-music-desktop/blob/master/doc/images/icon.png" alt="lx-music logo"></a></p>
+<p align="center"><img width="200" src="./doc/images/icon.png" alt="LX-M Music"></p>
 
-<h1 align="center">Lx-m Music 桌面版（增强版）</h1>
+<h1 align="center">LX-M Music 桌面版</h1>
+
+<p align="center">基于 LX Music 桌面版扩展，提供平滑动效、歌单与封面缓存、Cookie 歌单导入和播放体验增强。</p>
 
 <p align="center">
-  <a href="https://github.com/miao-moe/lx-music-desktop/releases"><img src="https://img.shields.io/github/release/miao-moe/lx-music-desktop" alt="Release version"></a>
-  <a href="https://electronjs.org/releases/stable"><img src="https://img.shields.io/github/package-json/dependency-version/miao-moe/lx-music-desktop/dev/electron/master" alt="Electron version"></a>
+  <a href="https://github.com/Miao-moe/lx-m_lx-Miao-moe-music-desktop/releases">下载发布版本</a> ·
+  <a href="https://github.com/Miao-moe/lx-m_lx-Miao-moe-music-desktop/issues">问题反馈</a> ·
+  官方 QQ 群：<strong>1083366464</strong>
 </p>
 
-<p align="center">在 LX-X Music 移动版基础上扩展，新增可解耦的扩展音源插件机制与 Cookie 同步功能</p>
+当前版本：**2.0.0**。本项目使用 Electron + Vue 3，原始上游为 [lyswhut/lx-music-desktop](https://github.com/lyswhut/lx-music-desktop)。
 
----
+## 2.0.0 更新
 
-## 仓库关系说明
+- **动画系统升级**：在保留原有组件和按钮布局的基础上，为主要页面、设置面板、弹窗和菜单加入过渡；播放详情页支持封面展开与收回、封面背景淡入淡出和歌词平滑滚动。
+- **动画设置持久化**：可调整动画速率，并单独选择是否跟随系统的“减少动态效果”设置，修复重启调试模式后动效消失的问题。
+- **歌单与封面缓存**：“我的列表”优先读取本地歌单数据；已加载并缓存的封面可在重启后复用，减少切页重复请求。
+- **平台歌单分组**：Cookie 导入的歌单按平台显示为可折叠分组，列表内显示歌单原名；分组展开状态会保存。
+- **长按拖动排序**：“我的列表”中的歌单可长按约 450 毫秒后上下拖动，也保留按住 Ctrl / Command 直接拖动的方式；在所属分组内排序。
+- **桌面歌词背景**：新增 0%–100% 的背景不透明度设置，支持数值输入和一键设为完全不透明。
+- **反馈入口**：“设置 → 关于”中加入官方 QQ 群 **1083366464**，也可通过本仓库 Issues 反馈问题。
 
-| 类型 | 仓库 | 说明 |
+## 功能与使用
+
+### 搜索、歌单与歌手详情
+
+- 支持歌曲、歌单、歌手和专辑搜索，可在酷我、酷狗、QQ 音乐、网易云和咪咕等平台间切换；具体搜索类型以所选平台的能力为准。
+- 点击歌曲列表中的歌手或专辑信息，可进入独立详情页；歌手详情可显示简介、歌曲和专辑等平台返回的信息。
+- 提供在线歌单、排行榜、推荐歌单、我的列表和播放队列。
+- 歌曲列表与下载列表支持显示封面；在“设置 → 列表设置”中可输入封面大小，范围为 **20–100 px**。
+- 加载失败时，支持的列表会提供重试入口；页面异常时可通过错误页重试或切换页面恢复。
+
+部分平台不会为所有歌手返回头像或简介，缺少这些信息时会显示占位内容。
+
+### 歌单和封面缓存
+
+“我的列表”中的歌曲数据保存在本地数据库。打开已读取的歌单时优先复用内存数据，启动时预读取上次选中的列表，避免重复等待远程歌单接口。增删歌曲和调整顺序会同步更新本地数据。
+
+小封面按显示尺寸请求缩略图，同一封面的并发请求会合并，并按可见区域加载。缩略图失败时会尝试原图；封面图片和获取到的封面地址会写入磁盘缓存，下次启动时优先复用。
+
+封面缓存有容量限制，达到约 **256 MiB 或 10,000 条记录**时会清理较早写入的内容。可在“设置 → 其他设置 → 资源缓存”中查看和清理；清理资源缓存不会删除本地歌单。缓存只覆盖已成功保存的资源，未加载或被清理的封面仍需联网获取，音频播放不属于这项封面缓存。
+
+### Cookie 登录与同步
+
+入口：**设置 → Cookie 同步设置**。
+
+支持为网易云、QQ 音乐、酷狗、酷我和咪咕分别填写 Cookie，也可使用“一键登录”。一键登录会调用系统默认浏览器，需要该浏览器支持 Chromium 自动化；无法完成时可手动填写 Cookie。
+
+- **测试获取歌单**：检查登录状态是否能读取个人歌单，显示结果及数量；测试操作不会修改本地歌单。
+- **立即同步**：将平台返回的自建歌单及歌曲导入“我的列表”。重复同步会更新对应的本地副本，使用云端内容覆盖该副本中的歌曲。
+- **同步平台自建歌单到本地**：开启后，在软件启动时自动同步一次；手动同步可单独执行。
+- **将播放记录同步回平台**：当前实现了网易云、QQ 音乐和酷狗的上报；歌曲自然播放完成或自动衔接下一首时触发，同一首歌在 30 分钟内去重，上报失败不影响播放。
+- **推荐歌单**：支持的平台推荐请求会携带已保存的 Cookie，实际推荐内容由平台返回。
+
+歌单同步的方向是**云端到本地**，本地编辑不会自动上传到平台。酷我和咪咕暂不支持播放记录上报。Cookie 被识别只代表具备必要字段，是否仍处于登录状态需通过实际请求确认。
+
+### 自定义音源与音质
+
+播放和下载使用所选音源返回的音频地址。当前程序保留平台搜索、歌单和歌词等接口，音频地址需要配置可用的自定义源。
+
+1. 打开“设置 → 基本设置 → 自定义源管理”。
+2. 通过“导入”选择本地 JavaScript 音源脚本，或通过“在线导入”填写脚本地址；本地导入支持一次选择多个文件。
+3. 在基本设置中选中已导入的音源。
+4. 在“设置 → 播放设置 → 优先播放的音质”中选择音质。
+5. 可使用基本设置中的“音源音质检测”，检查当前自定义源各平台的音质请求结果。
+
+界面提供 **128k / 320k / flac / flac24bit / hires / atmos / master** 七档优先音质，下载品质和列表标记会结合音源声明及歌曲信息显示。高音质获取或播放失败时，会尝试可用的较低音质。
+
+音质选项不保证每首歌都可用，最终取决于自定义源和音频资源。Cookie 同步设置本身不提供高音质解锁；音质检测主要检查样本歌曲能否返回音频地址，不代表所有歌曲均可播放。
+
+### 动画、歌词与播放设置
+
+| 功能 | 入口或操作 | 范围与说明 |
 | --- | --- | --- |
-| **主仓库（上游）（lx原版）** | [lyswhut/lx-music-desktop](https://github.com/lyswhut/lx-music-desktop) | 本项目的原始上游，由落雪无痕维护，基于 Electron + Vue 3 |
-| **参考仓库（移动版改造）（lx-x）** | [WalnutBai/lx-lxnetease-music-mobile-pro](https://github.com/WalnutBai/lx-lxnetease-music-mobile-pro) | WalnutBai 基于移动版的个人改造，参考了其 Cookie 同步、Gitcode 音源、Web 播放器换源等思路 |
-| **本项目（Fork）（lx-m）** | [Miao-moe/lx-Miao-moe-music-desktop](https://github.com/Miao-moe/lx-Miao-moe-music-desktop) | 本仓库，在主仓库 master 分支上增量开发 |
+| 平滑动画 | 设置 → 高级 → 界面增强 | 页面切换、菜单和弹窗等动效，还受基本设置中的动画总开关控制 |
+| 动画速率 | 设置 → 高级 → 动画速率 | 0.5x–1.5x，默认 1.0x |
+| 跟随系统减少动态效果 | 设置 → 高级 → 界面增强 | 默认关闭；开启后再根据系统偏好减少动效 |
+| 桌面歌词背景 | 设置 → 桌面歌词设置 → 背景不透明度 | 0% 完全透明，100% 完全不透明；锁定歌词后仍生效 |
+| 歌词翻译与罗马音 | 播放详情页的歌词右键菜单 | 根据音源返回的歌词内容切换显示 |
+| 无缝衔接与渐入渐出 | 设置 → 高级 → 播放增强 | 预加载下一首并通过双音频元素衔接，可设置 100–3000 ms 淡化时长；效果取决于音源响应和预加载情况 |
+| 音量控制 | 播放栏音量按钮、设置 → 播放设置 | 音量条支持鼠标滚轮；最大音量可设置为 100%–200% |
+| 设置搜索 | 设置页左上角搜索框 | 按设置名称和条目文本筛选 |
+| 设置页切换 | Alt + ← / Alt + → | 切换上一个或下一个设置面板 |
+| 歌单搜索快捷键 | 设置 → 快捷键设置 | 可配置聚焦列表搜索框的快捷键 |
+| 自定义主题 | 设置 → 基本设置 | 支持编辑、导入和导出主题 |
 
-> 本项目遵循主仓库 [Apache License 2.0](./LICENSE) 协议，所有新增功能仅供个人学习交流使用。
+### 数据存储
 
----
+LX-M Music 使用独立的应用标识和用户数据目录。常规安装下，Windows 的用户数据位于 `%APPDATA%\LX-M Music`，其中 `LxDatas` 保存设置和歌单等数据。
 
-## 新增功能（相对于主仓库）
+从旧版共享目录迁移时，程序会复制可迁移的数据到 LX-M 自己的目录，后续分别保存；便携模式使用自己的用户数据目录。备份和恢复可在“设置 → 备份与恢复”中操作。
 
-### 1. 扩展音源插件机制（解耦设计）
+## 历史更新摘要
 
-主仓库内置的音源仅包含 kw / kg / tx / wy / mg / xm。对于版权控制严格、接口变动频繁的
-第三方平台，本项目**不再将其解析逻辑内置进主程序**，而是提供一套**扩展音源插件机制**：
+以下根据项目更新日志整理；具体功能入口和限制以本文上方说明为准。
 
-- 主程序保持「干净的播放器」定位，仓库内不含任何平台专有接口 / 签名逻辑
-- 扩展音源以**独立插件**形式存在，可单独托管、单独更新
-- 插件在运行时由加载器动态注入，接口失效时**只需更新插件，无需主程序发版**
-- 加载失败的插件被静默跳过，绝不影响内置音源
-
-插件契约与使用方式详见 [`ext-source-plugins/README.md`](./ext-source-plugins/README.md)，
-加载器位于 `src/renderer/utils/musicSdk/plugins/loader.js`。
-
-> 具体扩展音源的接口细节不在本仓库维护，请自行编写/托管插件后通过
-> `window.__lxExtSourcePlugins__` 配置启用。
-
-### 2. Cookie 同步设置（全平台支持）
-
-> ⚠️ **重要：本项目中的 Cookie 不会用于「高音质解锁」。**
->
-> 高音质（320k / flac / flac24bit / hires / atmos / master）请通过「基本设置 → 自定义源」配置音源，
-> 详见下方 [高音质解锁 / 音源机制](#高音质解锁--音源机制) 章节。
-
-新增「设置 → Cookie 同步设置」面板，可为 **五个平台** 分别配置 Cookie：
-
-| 平台 | 关键字段 | 用途 |
-| --- | --- | --- |
-| 网易云音乐 | `MUSIC_U` / `__csrf` | 同步「我喜欢的音乐」 |
-| QQ 音乐 | `uin` / `qqmusic_key` | 同步自建歌单 |
-| 酷狗音乐 | `kg_mid` / `kg_user_v` | 同步「我喜欢」 |
-| 酷我音乐 | `kw_token` | 同步「我喜欢的歌单」 |
-| 咪咕音乐 | `migu_music_sid` | 同步收藏 |
-
-两个独立开关：
-
-- **播放记录同步**：每首歌播放完成后上报到对应平台，影响平台「每日推荐」算法
-- **收藏歌单同步**：本地收藏的歌曲定期上报到对应平台「我喜欢」歌单
-
-### 3. Fluent UI 风格图标库（重新设计）
-
-主仓库原本使用 Ionicons（外部图标库，含 `class="prefix__ionicon"` 残留）。
-本项目将其全部重新设计为 **Microsoft Fluent UI System Icons** 风格：
-
-- 24x24 viewBox，统一视觉重量
-- `fill="currentColor"`，主题色自动跟随
-- 圆角几何 + 1px stroke，符合 Fluent UI 设计语言
-- 从 18 个扩展到 **44 个**，新增播放控制（play/pause/prev/next/shuffle/repeat）、收藏（heart）、列表、设置、用户等
-- 路径：`src/renderer/assets/svgs/`（生成器：`scripts/gen-icons.js`）
-
-### 4. 高级设置面板（UI 增强 + 播放增强）
-
-新增「设置 → 高级」面板，包含两大块功能：
-
-#### 界面增强
-
-- **平滑动画**：全局 CSS 动画系统，控制页面切换/列表项过渡/弹窗淡入
-- **动画速率**：0.5x-1.5x 滑块调节（慢一倍 / 默认 / 快一半）
-
-#### 播放增强
-
-- **无缝衔接（Gapless Playback）**：双 audio 引擎交叉淡化，避免歌曲切换的音频中断
-- **渐入渐出（Fade-in / Fade-out）**：切歌时音量在指定毫秒内平滑过渡
-- **渐入渐出持续时间**：100-3000ms 滑块调节
-
-### 5. 设置页快捷键
-
-在设置页中支持 **Alt + ←** / **Alt + →** 切换上一个 / 下一个设置面板，
-无需鼠标点击侧边导航，提升设置浏览效率。
-
----
-
-## 高音质解锁 / 音源机制
-
-**核心原则**：高音质解锁通过「自定义音源」实现，与 Cookie 无关。
-
-### 什么是自定义音源
-
-Lx-m Music 内置的 kw / kg / tx / wy / mg 等音源默认只能拿到 128k 音频（接口限制），
-更高音质（320k / flac / flac24bit / hires / atmos / master）需要由用户手动导入「自定义源」（即一段 JS 脚本）来代理播放链接请求。
-
-自定义源脚本本质上是一个 HTTP 代理：Lx-m Music 把歌曲信息（songmid / hash）和期望音质告诉脚本，
-脚本去对应平台「带 VIP Cookie 请求」拿到高音质音频直链返回给 Lx-m Music。
-
-### 如何启用高音质
-
-1. 打开「设置 → 音源 → 预设音源链接」
-2. 点击「复制链接」按钮，复制任一音源链接（推荐 SixYin 或 Huibq）
-3. 打开「设置 → 基本设置 → 自定义源 → 自定义源管理」
-4. 选择「在线导入」→ 粘贴链接 → 确认
-5. 回到「基本设置」选择刚导入的音源作为当前音源
-6. 在「设置 → 播放设置 → 优先播放的音质」中选择 320k / flac / flac24bit / hires / atmos / master
-
-### 自定义音源 vs 扩展音源插件
-
-| 项目 | 自定义音源（主仓库机制） | 扩展音源插件（本项目机制） |
-| --- | --- | --- |
-| 安装方式 | 用户手动导入脚本 | 由加载器动态注入（本地/远程） |
-| 定位 | 为内置 5 大平台「换高音质直链」 | 注册主程序未内置的独立音源 |
-| 平台覆盖 | kw/kg/tx/wy/mg | 由插件自行定义 |
-| 更新方式 | 依赖音源作者维护 | 更新插件即可，主程序无需发版 |
-| 主仓库耦合 | 无接口逻辑 | 无接口逻辑（彻底解耦） |
-
----
-
-## 与参考仓库的差异
-
-参考仓库（lx-x） [WalnutBai/lx-lxnetease-music-mobile-pro](https://github.com/WalnutBai/lx-lxnetease-music-mobile-pro) 是基于 **移动版** 的改造，
-本项目是 **桌面版** 的改造，主要差异：
-
-| 特性 | WalnutBai 移动版（参考） | 本项目（桌面版） |
-| --- | --- | --- |
-| 框架 | React Native | Electron + Vue 3 |
-| 平台 | Android | Windows / macOS / Linux |
-| Cookie 设置入口 | 设置 → 基本设置 → WyCookie | 设置 → Cookie 同步设置 |
-| Cookie 用途 | 同时用于「网易云 vip 歌曲直链」与「同步」 | **仅用于同步**，不解锁音质 |
-| 内置音源 | kw/kg/tx/wy/mg + git（Gitcode） | kw/kg/tx/wy/mg/xm + 扩展音源插件机制 |
-| 高音质解锁 | 部分依赖 Cookie | 完全依赖自定义音源（与主仓库一致） |
-
----
-
-## 项目结构（新增/修改部分）
-
-```
-src/
-├── common/
-│   ├── defaultSetting.ts                       # 修改：新增 cookie.* / source.* 默认值
-│   └── types/app_setting.d.ts                  # 修改：新增 cookie.* / source.* 类型
-└── renderer/
-    ├── utils/
-    │   ├── cookieManager.ts                    # 新增：Cookie 统一管理工具
-    │   └── musicSdk/
-    │       ├── index.js                        # 修改：内置音源 + 扩展音源动态注入
-    │       ├── plugins/
-    │       │   └── loader.js                   # 新增：扩展音源插件加载器（本地/远程）
-    │       └── wy/api-cookie.js                # 新增：网易云 Cookie 同步辅助接口（非解锁）
-    └── views/Setting/
-        ├── index.vue                           # 修改：注册 Cookie / SourceExtra 面板
-        └── components/
-            ├── SettingCookie.vue               # 新增：Cookie 同步设置面板
-            └── SettingSourceExtra.vue          # 新增：音源面板（内置音源 + 预设链接）
-
-ext-source-plugins/                             # 新增：可独立分发的扩展音源插件（不属于主程序内置）
-└── README.md                                   # 插件契约与启用说明
-```
-
----
+| 版本 | 主要变化 |
+| --- | --- |
+| 1.3.2 | 修复进入歌单时卡死的问题，分离 LX-M 与原版 LX 的用户数据 |
+| 1.3.1 | 修复搜索后切换歌单卡死、音源检测失败的问题 |
+| 1.3.0 | 修正网易云歌手页歌曲时长；改进高音质失败后的降级重试；增加歌手简介和歌词翻译、罗马音的右键切换 |
+| 1.2.1 | 修复歌手及专辑加载问题；兼容平台未返回歌手头像的情况 |
+| 1.2.0 | 增加歌手、专辑独立详情页及点击跳转；下载列表显示封面；改进封面显示和加载失败重试，修复部分切页白屏问题 |
+| 1.1.0 | 增加歌手、专辑搜索，设置搜索和歌单搜索快捷键；封面大小支持数值调节；优化音量调节与播放地址缓存刷新 |
+| 1.0.5 | 支持封面大小调节、本地音源批量导入及自定义主题导入导出；修正关于页面文字 |
+| 1.0.4 | 增加歌曲封面、播放队列、音源音质检测和推荐内容获取 |
+| 1.0.3 | 增加部分平台播放记录上报、音量滚轮调节和最高 200% 的音量设置；改进更新逻辑 |
+| 1.0.2 | 增加 hires / atmos / master 音质选项，调整下载图标与应用标识，优化 Cookie 歌单同步 |
+| 1.0.1 | 修复软件更新页的版本检测问题 |
 
 ## 开发与构建
 
-本项目与主仓库保持完全兼容的构建方式：
+环境要求：**Node.js 22 或更高版本、npm 8.5.2 或更高版本**。依赖版本以 `package-lock.json` 为准。
 
 ```bash
-# 安装依赖
-npm install
+# 按锁文件安装依赖，并准备当前平台的 Electron 原生模块
+npm ci
 
-# 开发模式（启动 Electron + 渲染进程热更新）
+# 开发模式：Electron + 渲染进程热更新
 npm run dev
 
-# 构建生产包
+# 编译生产代码
 npm run build
+
+# 重新编译并生成 Windows x64 安装包
+npm run pack
 ```
 
-详细构建步骤请参考主仓库文档：<https://lyswhut.github.io/lx-music-doc/desktop/use-source-code>
+Windows PowerShell 若提示无法运行 `npm.ps1`，可将命令中的 `npm` 换成 `npm.cmd`。
 
----
+`npm run dev` 启动前会自动准备当前平台和架构的 Electron 原生依赖。跨架构打包后如需单独恢复开发依赖，可运行 `npm run postinstall`。
 
-## 已知限制
+生产编译入口 `npm run build` 以及会先编译的 `pack` 命令会清理已有 `dist/` 和 `build/` 输出。需要保留旧安装包时，请先将其移到这些输出目录之外。单独运行分架构打包命令只打包现有 `dist`，修改源码或版本号后应先重新编译。
 
-1. **扩展音源插件**：第三方平台接口可能因风控策略变化而失效，插件本身不保证长期可用；接口失效时更新对应插件即可，主程序无需发版。
-2. 软件已全面支持 **128k / 320k / flac / flac24bit / hires / atmos / master** 七种音质，包括播放优先级设置、下载品质选择、歌曲列表品质徽章展示。master 音质需要通过支持该品质的自定义音源配合使用。
+### Windows 全部架构与格式
 
----
+可生成以下 **11 个安装或分发包**：
 
-## 致谢
+| 架构 | 安装版 Setup.exe | 便携单文件 .exe | 绿色压缩包 .7z |
+| --- | --- | --- | --- |
+| x64 | ✓ | ✓ | ✓ |
+| x86（32 位） | ✓ | ✓ | ✓ |
+| ARM64 | ✓ | ✓ | ✓ |
+| x86 + x64 合集（x86_64） | ✓ | ✓ | — |
 
-- [lyswhut/lx-music-desktop（lx原版）](https://github.com/lyswhut/lx-music-desktop) —— 主仓库，本项目所有基础
-- [WalnutBai/lx-lxnetease-music-mobile-pro（lx-x）](https://github.com/WalnutBai/lx-lxnetease-music-mobile-pro) —— 移动版改造，本项目 Cookie 同步思路来源
+在 Windows 环境中依次执行：
 
----
+```bash
+# 编译，并生成四种安装版及 x64 绿色压缩包
+npm run pack:win
 
-## 项目协议
+# 生成 x64、x86、x86_64 三种便携包
+npm run pack:win:portable
 
-本项目继承主仓库 [Apache License 2.0](./LICENSE) 协议，并受其补充协议约束。
+# 补齐 ARM64 便携包与 x86、ARM64 绿色压缩包
+node build-config/build-pack.js target=win arch=arm64 type=portable
+node build-config/build-pack.js target=win arch=x86 type=green
+npm run pack:win:7z:arm64
+```
 
-- 本项目内的官方音乐平台别名为本项目内对官方音乐平台的一个称呼，不包含恶意。
-- 本项目不对数据的合法性、准确性负责。
-- **禁止在违反当地法律法规的情况下使用本项目。**
-- 音乐平台不易，请尊重版权，支持正版。
+产物输出到 `build/`。`npm run pack:win` 本身只包含上述第一步。项目也保留了 macOS 和 Linux 构建脚本，命令及目标架构可查看 [package.json](./package.json)；不同平台的构建需要相应环境和原生依赖。
+
+### 验证
+
+```bash
+npm run lint
+
+# Cookie 歌单、缩略图、歌单缓存、封面地址缓存和生产请求回归
+node --test tests/cookie-playlists.test.cjs tests/cover-thumbnail.test.cjs tests/list-data-cache.test.cjs tests/music-cover-cache.test.cjs tests/request.production.test.cjs
+
+# 先保持 npm run dev 运行，再在另一个终端执行 Electron 界面回归
+node --test --test-concurrency=1 tests/motion.electron.test.cjs tests/motion-restart.electron.test.cjs tests/cover-image.electron.test.cjs tests/list-cache.electron.test.cjs
+```
+
+界面测试使用临时用户数据目录，覆盖快速切页、播放详情展开收回、动效设置在重启后的保持，以及歌单和封面缓存复用。
+
+## 代码入口
+
+| 模块 | 位置 |
+| --- | --- |
+| 动画开关与时序 | [smoothAnimation.ts](./src/renderer/utils/smoothAnimation.ts)、[motion.ts](./src/renderer/utils/motion.ts) |
+| 页面切换与播放详情动效 | [MotionView.vue](./src/renderer/components/common/MotionView.vue)、[usePlayerDetailMotion.ts](./src/renderer/utils/compositions/usePlayerDetailMotion.ts) |
+| 封面组件与磁盘缓存 | [CoverImage.vue](./src/renderer/components/common/CoverImage.vue)、[artworkStorage.ts](./src/renderer/utils/artworkStorage.ts) |
+| 本地歌单读取与预热 | [rendererListManage.ts](./src/renderer/store/list/listManage/rendererListManage.ts)、[useDataInit.ts](./src/renderer/core/useApp/useDataInit.ts) |
+| 平台歌单导入与分组 | [cookieSync.ts](./src/renderer/utils/cookieSync.ts)、[useFolders.ts](./src/renderer/views/List/MyList/useFolders.ts) |
+| 播放记录上报 | [playHistoryReporter.ts](./src/renderer/utils/playHistoryReporter.ts) |
+| 桌面歌词 | [SettingDesktopLyric.vue](./src/renderer/views/Setting/components/SettingDesktopLyric.vue)、[App.vue](./src/renderer-lyric/App.vue) |
+
+仓库还提供面向开发者的扩展音源加载器，通过 `window.__lxExtSourcePlugins__` 配置本地工厂函数或远程脚本。它与用户界面中的“自定义源管理”是不同机制，当前没有独立的插件管理面板。接口和配置可参考 [扩展音源说明](./ext-source-plugins/README.md)及[加载器代码](./src/renderer/utils/musicSdk/plugins/loader.js)，集成时需自行适配搜索、歌单等调用方。
+
+## 致谢与协议
+
+- [lyswhut/lx-music-desktop](https://github.com/lyswhut/lx-music-desktop)：原始上游及桌面播放器基础。
+- [WalnutBai/lx-lxnetease-music-mobile-pro](https://github.com/WalnutBai/lx-lxnetease-music-mobile-pro)：Cookie 同步等功能的参考思路。
+
+本项目继承上游 [Apache License 2.0](./LICENSE) 协议，并受[补充协议](./licenses/license_zh.txt)约束。平台别名仅用于标识对应平台；本项目不对数据的合法性、准确性负责。请遵守当地法律法规，尊重版权，支持正版。
