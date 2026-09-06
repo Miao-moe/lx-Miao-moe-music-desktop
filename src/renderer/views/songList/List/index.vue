@@ -8,7 +8,9 @@
       <base-btn :class="$style.btn" outline min @click="visibleOpenSongListModal = true">{{ $t('songlist__import_input_show_btn') }}</base-btn>
       <base-selection :model-value="source" :class="$style.select" :list="sourceList" item-key="id" item-name="name" @update:model-value="handleToggleSource" />
     </div>
-    <list-view :source="source" :tag-id="tagId" :sort-id="sortId" :page="page" />
+    <common-motion-view :motion-key="`${source}:${tagId}:${sortId}:${page}`">
+      <list-view :source="source" :tag-id="tagId" :sort-id="sortId" :page="page" />
+    </common-motion-view>
     <open-list-modal v-model="visibleOpenSongListModal" :source-list="sourceList" />
   </div>
 </template>

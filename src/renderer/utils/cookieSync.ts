@@ -23,7 +23,15 @@ interface FetchResponse {
 }
 
 const fetchResponse = async(url: string, options: Record<string, any> = { method: 'get' }): Promise<FetchResponse> => {
-  return (httpFetch(url, options) as any).promise
+  const response: FetchResponse = await (httpFetch(url, options) as any).promise
+  if (response.statusCode < 200 || response.statusCode >= 300) throw new Error(`cookie api: HTTP ${response.statusCode}`)
+  return response
+}
+
+export interface CookiePlaylistCheck {
+  source: CookieSource
+  status: 'success' | 'missing_cookie' | 'invalid_cookie' | 'login_expired' | 'failed'
+  listCount: number
 }
 
 export interface CookieSyncDetail {
@@ -190,8 +198,9 @@ const getKgPlaylists = async(cookie: string): Promise<RemotePlaylist[]> => {
   const result: RemotePlaylist[] = []
   const ids = new Set<string>()
   let page = 1
+  let loaded = 0
   let total = Number.POSITIVE_INFINITY
-  while (result.length < total && page <= 100) {
+  while (loaded < total && page <= 100) {
     const data = await requestKugou('/v7/get_all_list', 'cloudlist.service.kugou.com', {
       userid: auth.userid,
       token: auth.token,
@@ -200,18 +209,18 @@ const getKgPlaylists = async(cookie: string): Promise<RemotePlaylist[]> => {
       page,
       pagesize: 30,
     }, auth)
-    const list = Array.isArray(data?.info) ? data.info : []
+    if (!Array.isArray(data?.info)) throw new Error('kg: failed to load playlists')
+    const list = data.info
     total = Number(data?.list_count ?? list.length)
-    let added = 0
+    loaded += list.length
     for (const item of list) {
       if (Number(item.type) !== 0 || Number(item.is_def) !== 0) continue
       const id = String(item.listid ?? '')
       if (!id || ids.has(id)) continue
       ids.add(id)
-      added++
       result.push({ id, name: String(item.name ?? '').trim() })
     }
-    if (!list.length || added === 0) break
+    if (!list.length) break
     page++
   }
   return result.filter(item => item.id && item.name)
@@ -235,7 +244,8 @@ const getKgSongs = async(cookie: string, id: string): Promise<LX.Music.MusicInfo
       show_cover: 1,
       type: 0,
     }, auth)
-    const list = Array.isArray(data?.info) ? data.info : []
+    if (!Array.isArray(data?.info)) throw new Error('kg: failed to load playlist songs')
+    const list = data.info
     total = Number(data?.count ?? list.length)
     if (!list.length) break
     songs.push(...list.map((song: any) => ({ ...song, hash: song.hash ?? song.FileHash })))
@@ -247,14 +257,14 @@ const getKgSongs = async(cookie: string, id: string): Promise<LX.Music.MusicInfo
 
 const parseMiguPlaylists = (body: any): RemotePlaylist[] => {
   const list = body?.data?.myCreatedMusicLists?.createdMusicLists ?? body?.myCreatedMusicLists?.createdMusicLists
-  const arr = Array.isArray(list) ? list : []
-  return arr
+  if (!Array.isArray(list)) throw new Error('mg: failed to load playlists')
+  return list
     .map((item: any) => ({ id: String(item.musicListId ?? item.id ?? ''), name: String(item.title ?? item.name ?? '').trim() }))
     .filter((item: RemotePlaylist) => item.id && item.name)
 }
 
 const getMgPlaylists = async(cookie: string, captured?: RemotePlaylist[]): Promise<RemotePlaylist[]> => {
-  if (captured?.length) return captured
+  if (captured) return captured
   const { body } = await fetchResponse('https://c.musicapp.migu.cn/pc/user/home-page/v2.0', {
     headers: {
       Cookie: cookie,
@@ -276,7 +286,8 @@ const getPagedSdkSongs = async(source: 'kw' | 'mg', id: string): Promise<LX.Musi
   let total = Number.POSITIVE_INFINITY
   while (items.length < total && page <= 1000) {
     const result = await musicSdk[source].songList.getListDetail(id, page)
-    const list = Array.isArray(result?.list) ? result.list : []
+    if (!Array.isArray(result?.list)) throw new Error(`${source}: failed to load playlist songs`)
+    const list = result.list
     total = Number(result?.total ?? list.length)
     items.push(...list)
     if (!list.length || items.length >= total) break
@@ -292,6 +303,21 @@ const getRemotePlaylists = async(source: CookieSource, cookie: string, captured?
     case 'kg': return getKgPlaylists(cookie)
     case 'kw': return getKwPlaylists(cookie)
     case 'mg': return getMgPlaylists(cookie, captured)
+  }
+}
+
+// Check access without importing, overwriting or removing any local playlists.
+export const checkCookiePlaylists = async(source: CookieSource): Promise<CookiePlaylistCheck> => {
+  const cookie = getCookie(source)
+  if (!cookie.trim()) return { source, status: 'missing_cookie', listCount: 0 }
+  if (!isCookieRecognized(source, cookie)) return { source, status: 'invalid_cookie', listCount: 0 }
+  try {
+    const playlists = await getRemotePlaylists(source, cookie)
+    return { source, status: 'success', listCount: playlists.length }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ''
+    const status = message.includes('login expired') ? 'login_expired' : 'failed'
+    return { source, status, listCount: 0 }
   }
 }
 
@@ -379,9 +405,9 @@ const runAllSync = async(): Promise<CookieSyncResult> => {
       const result = await syncSource(source, getCookie(source))
       listCount += result.listCount
       count += result.count
-      okSources++
+      if (result.listCount > 0 || result.total === 0) okSources++
       if (result.failed > 0) failedSources++
-      const success = result.listCount > 0
+      const success = result.failed === 0
       detail = { source, status: success ? 'success' : 'failed', listCount: result.listCount, count: result.count }
     } catch (err) {
       failedSources++

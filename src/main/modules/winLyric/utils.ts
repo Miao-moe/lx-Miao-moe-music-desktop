@@ -73,6 +73,7 @@ export const watchConfigKeys = [
   'desktopLyric.style.lineGap',
   // 'desktopLyric.style.fontWeight',
   'desktopLyric.style.opacity',
+  'desktopLyric.style.backgroundOpacity',
   'desktopLyric.style.ellipsis',
   'desktopLyric.style.isFontWeightFont',
   'desktopLyric.style.isFontWeightLine',

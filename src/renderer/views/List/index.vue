@@ -1,7 +1,9 @@
 <template>
   <div id="my-list" :class="$style.container" @click="handleContainerClick">
     <MyList ref="myList" :list-id="listId" @show-menu="$refs.musicList.handleMenuClick()" />
-    <MusicList ref="musicList" :list-id="listId" @show-menu="$refs.myList.handleMenuClick()" />
+    <common-motion-view :motion-key="listId">
+      <MusicList ref="musicList" :list-id="listId" @show-menu="$refs.myList.handleMenuClick()" />
+    </common-motion-view>
   </div>
 </template>
 

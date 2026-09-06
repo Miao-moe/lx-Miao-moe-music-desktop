@@ -3,7 +3,7 @@
     <div :class="$style.progress">
       <common-progress-bar v-if="!isShowPlayerDetail" :class-name="$style.progressBar" :progress="progress" :handle-transition-end="handleTransitionEnd" :is-active-transition="isActiveTransition" />
     </div>
-    <div :class="$style.picContent" :aria-label="$t('player__pic_tip')" @contextmenu="handleToMusicLocation" @click="showPlayerDetail">
+    <div data-player-cover :class="$style.picContent" :aria-label="$t('player__pic_tip')" @contextmenu="handleToMusicLocation" @click="showPlayerDetail">
       <transition name="cover-swap">
         <img v-if="musicInfo.pic" :key="musicInfo.pic" :src="musicInfo.pic" decoding="async" @error="imgError">
         <div v-else key="empty-cover" :class="$style.emptyPic">L<span>X</span></div>

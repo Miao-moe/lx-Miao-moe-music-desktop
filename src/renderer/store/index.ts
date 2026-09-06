@@ -1,9 +1,7 @@
 import { ref, reactive, shallowRef, markRaw, computed, watch } from '@common/utils/vueTools'
 import { windowSizeList as configWindowSizeList } from '@common/config'
 import { appSetting } from './setting'
-import pkg from '../../../package.json'
 import music from '@renderer/utils/musicSdk'
-process.versions.app = pkg.version
 
 export const apiSource = ref<string | null>(null)
 export const proxy: {
@@ -126,7 +124,8 @@ export const versionInfo = window.lxData.versionInfo = reactive<{
   status: LX.UpdateStatus
   downloadProgress: LX.UpdateProgressInfo | null
 }>({
-  version: pkg.version,
+  // 挂载界面前由主进程提供当前安装包的版本，避免复用旧构建时显示旧版本。
+  version: '',
   newVersion: null,
   showModal: false,
   reCheck: false,

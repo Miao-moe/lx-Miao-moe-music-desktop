@@ -5,29 +5,33 @@ export default ({ visible, location, onHide }) => {
   const transition1 = 'transform, opacity'
   const transition2 = 'transform, opacity, top, left'
   let show = false
+  let offset = { x: 0, y: 0 }
   const dom_menu = ref(null)
   const menuStyles = reactive({
     left: 0,
     top: 0,
     opacity: 0,
     transitionProperty: 'transform, opacity',
-    transform: 'scale(.96) translate(0, -4px)',
+    transform: 'translate(0, 8px) scale(.98)',
     pointerEvents: 'none',
   })
 
   const handleShow = () => {
     show = true
+    offset = handleGetOffsetXY(location.value.x, location.value.y)
     menuStyles.opacity = 1
-    menuStyles.transform = `scale(1) translate(${handleGetOffsetXY(location.value.x, location.value.y)})`
+    menuStyles.transform = `translate(${offset.x}px, ${offset.y}px) scale(1)`
     menuStyles.pointerEvents = 'auto'
   }
   const handleHide = () => {
     menuStyles.opacity = 0
-    menuStyles.transform = 'scale(.96) translate(0, -4px)'
+    menuStyles.transitionProperty = transition1
+    menuStyles.transform = `translate(${offset.x}px, ${offset.y + 8}px) scale(.98)`
     menuStyles.pointerEvents = 'none'
     show = false
   }
   const handleGetOffsetXY = (left, top) => {
+    if (!dom_menu.value?.offsetParent) return { x: 0, y: 0 }
     const listWidth = dom_menu.value.clientWidth
     const listHeight = dom_menu.value.clientHeight
     const dom_container_parant = dom_menu.value.offsetParent
@@ -43,7 +47,7 @@ export default ({ visible, location, onHide }) => {
     if (containerHeight > listHeight && offsetHeight < 5) {
       y = offsetHeight - 5
     }
-    return `${x}px, ${y}px`
+    return { x, y }
   }
   const handleDocumentClick = (event) => {
     if (!show) return
@@ -66,10 +70,13 @@ export default ({ visible, location, onHide }) => {
   watch(location, location => {
     menuStyles.left = location.x - window.lx.rootOffset + 2 + 'px'
     menuStyles.top = location.y - window.lx.rootOffset + 'px'
+    offset = handleGetOffsetXY(location.x, location.y)
     // nextTick(() => {
     if (show) {
       if (menuStyles.transitionProperty != transition2) menuStyles.transitionProperty = transition2
-      menuStyles.transform = `scale(1) translate(${handleGetOffsetXY(location.x, location.y)})`
+      menuStyles.transform = `translate(${offset.x}px, ${offset.y}px) scale(1)`
+    } else {
+      menuStyles.transform = `translate(${offset.x}px, ${offset.y + 8}px) scale(.98)`
     }
     // })
   }, { deep: true })

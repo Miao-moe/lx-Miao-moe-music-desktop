@@ -174,7 +174,8 @@ function startElectron() {
   let args = [
     '--inspect=5858',
     // 'NODE_ENV=development',
-    path.join(__dirname, '../dist/main.js'),
+    // 从项目入口启动，让 Electron 读取 package.json 中的应用版本。
+    path.join(__dirname, '..'),
   ]
 
   // detect yarn or npm and process commandline args accordingly

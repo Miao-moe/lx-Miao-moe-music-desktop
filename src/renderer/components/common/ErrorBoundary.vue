@@ -1,26 +1,28 @@
 <template>
-  <div v-if="errorInfo" class="view-container" :class="$style.container">
-    <div :class="$style.card">
-      <svg-icon name="help-circle-outline" :class="$style.icon" />
-      <h2 :class="$style.title">{{ $t('error_view__title') }}</h2>
-      <div :class="$style.detail">
-        <p :class="$style.row">
-          <span :class="$style.label">{{ $t('error_view__reason') }}</span>
-          <span :class="$style.value" :title="errorInfo?.message">{{ errorInfo?.message }}</span>
-        </p>
-        <p :class="$style.row">
-          <span :class="$style.label">{{ $t('error_view__code') }}</span>
-          <span :class="$style.value" :title="errorInfo?.code">{{ errorInfo?.code }}</span>
-        </p>
-      </div>
-      <p :class="$style.tip">{{ $t('error_view__tip') }}</p>
-      <div :class="$style.actions">
-        <base-btn min @click="handleRetry">{{ $t('error_view__retry') }}</base-btn>
-        <base-btn min outline @click="handleBackHome">{{ $t('error_view__back_home') }}</base-btn>
+  <div class="view-container" :class="$style.root">
+    <div v-if="errorInfo" :class="$style.container">
+      <div :class="$style.card">
+        <svg-icon name="help-circle-outline" :class="$style.icon" />
+        <h2 :class="$style.title">{{ $t('error_view__title') }}</h2>
+        <div :class="$style.detail">
+          <p :class="$style.row">
+            <span :class="$style.label">{{ $t('error_view__reason') }}</span>
+            <span :class="$style.value" :title="errorInfo?.message">{{ errorInfo?.message }}</span>
+          </p>
+          <p :class="$style.row">
+            <span :class="$style.label">{{ $t('error_view__code') }}</span>
+            <span :class="$style.value" :title="errorInfo?.code">{{ errorInfo?.code }}</span>
+          </p>
+        </div>
+        <p :class="$style.tip">{{ $t('error_view__tip') }}</p>
+        <div :class="$style.actions">
+          <base-btn min @click="handleRetry">{{ $t('error_view__retry') }}</base-btn>
+          <base-btn min outline @click="handleBackHome">{{ $t('error_view__back_home') }}</base-btn>
+        </div>
       </div>
     </div>
+    <slot v-else />
   </div>
-  <slot v-else />
 </template>
 
 <script setup lang="ts">
@@ -63,7 +65,17 @@ const handleBackHome = () => {
 <style lang="less" module>
 @import '@renderer/assets/styles/layout.less';
 
+.root {
+  height: 100%;
+
+  > :global(.view-container) {
+    height: 100%;
+    width: 100%;
+  }
+}
+
 .container {
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -11,6 +11,7 @@
         </svg>
       </div>
     </div>
+    <transition name="selection-flyout">
     <ul v-if="show" ref="dom_list" class="selection-list scroll" :class="$style.list" :style="listStyles">
       <li
         v-for="(item, index) in list" :key="index" :class="[$style.listItem, (itemKey ? item[itemKey] : item) == modelValue ? $style.active : null]"
@@ -19,6 +20,7 @@
         {{ itemName ? item[itemName] : item }}
       </li>
     </ul>
+    </transition>
   </div>
 </template>
 
@@ -50,7 +52,7 @@ export default {
     return {
       show: false,
       listStyles: {
-        transform: 'scaleY(0) translateY(0)',
+        '--selection-offset': '0px',
       },
     }
   },
@@ -79,17 +81,11 @@ export default {
       if (!this.show) return
       // if (e && e.target.parentNode != this.$refs.dom_list && this.show) return this.show = false
       if (e && (e.target == this.$refs.dom_btn || this.$refs.dom_btn.contains(e.target))) return
-      this.listStyles.transform = 'scaleY(0) translateY(0)'
-      setTimeout(() => {
-        this.show = false
-      }, 50)
+      this.show = false
     },
     handleKeyboardHide() {
       if (!this.show) return
-      this.listStyles.transform = 'scaleY(0) translateY(0)'
-      setTimeout(() => {
-        this.show = false
-      }, 50)
+      this.show = false
     },
     handleClick(item) {
       // console.log(this.modelValue)
@@ -100,7 +96,8 @@ export default {
     handleShow() {
       this.show = true
       this.$nextTick(() => {
-        this.listStyles.transform = `scaleY(1) translateY(${this.handleGetOffset()}px)`
+        if (!this.show || !this.$refs.dom_list) return
+        this.listStyles['--selection-offset'] = `${this.handleGetOffset()}px`
 
         const activeItem = this.$refs.dom_list.children[this.activeIndex]
         if (activeItem) this.$refs.dom_list.scrollTop = activeItem.offsetTop - this.$refs.dom_list.clientHeight * 0.38
@@ -194,10 +191,10 @@ export default {
   left: 0;
   width: 100%;
   background-color: var(--color-surface-elevated);
-  opacity: 0;
-  transform: scaleY(0) translateY(0);
+  opacity: 1;
+  transform: translateY(var(--selection-offset)) scale(1);
   transform-origin: 0 (@selection-height / 2) 0;
-  transition: var(--duration-normal) var(--ease-standard);
+  transition: var(--duration-popup) var(--ease-standard);
   transition-property: transform, opacity;
   z-index: 10;
   border: 1px solid var(--color-border);
@@ -233,4 +230,15 @@ export default {
 }
 
 
+</style>
+
+<style lang="less">
+.selection-flyout-enter-active, .selection-flyout-leave-active {
+  transition: transform var(--duration-popup) var(--ease-standard), opacity var(--duration-popup) ease !important;
+}
+.selection-flyout-enter-from, .selection-flyout-leave-to {
+  opacity: 0 !important;
+  transform: translateY(calc(var(--selection-offset, 0px) - 8px)) scale(.98) !important;
+  pointer-events: none;
+}
 </style>

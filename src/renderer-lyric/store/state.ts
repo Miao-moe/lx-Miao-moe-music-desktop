@@ -26,6 +26,7 @@ export const setting = shallowReactive<LX.DesktopLyric.Config>({
   'desktopLyric.style.lineGap': 15,
   // 'desktopLyric.style.fontWeight': true,
   'desktopLyric.style.opacity': 95,
+  'desktopLyric.style.backgroundOpacity': 0,
   'desktopLyric.style.ellipsis': false,
   'desktopLyric.style.isFontWeightFont': false,
   'desktopLyric.style.isFontWeightLine': false,

@@ -1,6 +1,7 @@
 import { ref, onMounted, onBeforeUnmount, watch, nextTick } from '@common/utils/vueTools'
 import { throttle, formatPlayTime2 } from '@common/utils/common'
 import { scrollTo } from '@common/utils/renderer'
+import { isMotionEnabled, scrollWithSpring } from '@renderer/utils/motion'
 import { play } from '@renderer/core/player/action'
 import { appSetting } from '@renderer/store/setting'
 // import { player as eventPlayerNames } from '@renderer/event/names'
@@ -49,6 +50,7 @@ export default ({ isPlay, lyric, playProgress, isShowLyricProgressSetting, offse
     point.x = rect.x
     point.y = rect.y
     let dom = document.elementFromPoint(point.x, point.y)
+    if (!dom) return
     if (dom_pre_line === dom) return
     if (dom.tagName == 'SPAN') {
       dom = dom.parentNode.parentNode
@@ -84,7 +86,11 @@ export default ({ isPlay, lyric, playProgress, isShowLyricProgressSetting, offse
     if (isSkipMouseEnter) return
     if (isStopScroll.value) return
     let dom_p = dom_lines[lyric.line]
-    cancelScrollFn = scrollTo(dom_lyric.value, dom_p ? (dom_p.offsetTop - dom_lyric.value.clientHeight * 0.38) : 0, duration)
+    cancelScrollFn?.()
+    const target = dom_p ? (dom_p.offsetTop - dom_lyric.value.clientHeight * 0.38) : 0
+    cancelScrollFn = duration && isMotionEnabled()
+      ? scrollWithSpring(dom_lyric.value, target)
+      : scrollTo(dom_lyric.value, target, 0)
   }
   const clearLyricScrollTimeout = () => {
     if (!timeout) return
@@ -102,6 +108,8 @@ export default ({ isPlay, lyric, playProgress, isShowLyricProgressSetting, offse
     }, 3000)
   }
   const handleLyricDown = (y) => {
+    cancelScrollFn?.()
+    cancelScrollFn = null
     // console.log(event)
     if (delayScrollTimeout) {
       clearTimeout(delayScrollTimeout)
@@ -158,6 +166,7 @@ export default ({ isPlay, lyric, playProgress, isShowLyricProgressSetting, offse
   }
 
   const setLyric = (lines) => {
+    if (!dom_lyric.value || !dom_lyric_text.value) return
     const currentLine = lyric.line
     const previousLine = dom_lines?.[currentLine]
     const lineOffset = previousLine && dom_lyric.value && previousLine.time == lines[currentLine]?.time
@@ -174,6 +183,7 @@ export default ({ isPlay, lyric, playProgress, isShowLyricProgressSetting, offse
     dom_lyric_text.value.textContent = ''
     dom_lyric_text.value.appendChild(dom_line_content)
     nextTick(() => {
+      if (!dom_lyric.value) return
       dom_lines = dom_lyric.value.querySelectorAll('.line-content')
       const currentLineDom = dom_lines[currentLine]
       if (lineOffset != null && currentLineDom) {
@@ -230,6 +240,9 @@ export default ({ isPlay, lyric, playProgress, isShowLyricProgressSetting, offse
   })
 
   onBeforeUnmount(() => {
+    cancelScrollFn?.()
+    clearLyricScrollTimeout()
+    clearTimeout(delayScrollTimeout)
     document.removeEventListener('mousemove', handleMouseMsMove)
     document.removeEventListener('mouseup', handleMouseMsUp)
     document.removeEventListener('touchmove', handleTouchMove)

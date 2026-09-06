@@ -11,6 +11,14 @@
     <div :class="$style.popup" :style="popupStyle" :aria-hidden="!popupVisible" @click.stop>
       <div :class="$style.list" class="scroll">
         <div :class="$style.tag" @click="handleToggleTag('')">{{ $t('default') }}</div>
+        <div v-if="isLoading" class="ui-state" role="status" aria-busy="true">
+          <span class="ui-spinner" />
+          <p>{{ $t('list__loading') }}</p>
+        </div>
+        <div v-else-if="isLoadFailed" class="ui-state ui-state-error" role="status">
+          <p>{{ $t('list__load_failed') }}</p>
+          <base-btn min @click="loadTags(source)">{{ $t('reload') }}</base-btn>
+        </div>
         <dl v-for="tagInfo in list" :key="tagInfo.name">
           <dt :class="$style.type">{{ tagInfo.name }}</dt>
           <dd v-for="tag in tagInfo.list" :key="tag.id" :class="$style.tag" @click="handleToggleTag(tag.id)">{{ tag.name }}</dd>
@@ -47,6 +55,32 @@ const route = useRoute()
 const t = useI18n()
 
 const list = shallowReactive([])
+const isLoading = ref(false)
+const isLoadFailed = ref(false)
+let tagsRequestId = 0
+
+const loadTags = async(source) => {
+  const requestId = ++tagsRequestId
+  list.splice(0, list.length)
+  isLoadFailed.value = false
+  isLoading.value = !!source
+  if (!source) return
+
+  try {
+    const tagInfo = tags[source] ?? await getTags(source)
+    if (requestId !== tagsRequestId) return
+    const tagList = [{ name: window.i18n.t('songlist__tag_info_hot_tag'), list: [...tagInfo.hotTag] }, ...tagInfo.tags]
+    setTags(tagInfo, source)
+    list.splice(0, list.length, ...tagList)
+  } catch (error) {
+    if (requestId !== tagsRequestId) return
+    isLoadFailed.value = true
+    console.warn('Load song list tags failed:', error)
+  } finally {
+    if (requestId === tagsRequestId) isLoading.value = false
+  }
+}
+
 const handleToggleTag = (id) => {
   void router.replace({
     path: route.path,
@@ -58,15 +92,7 @@ const handleToggleTag = (id) => {
   })
   handleHide()
 }
-watch(() => props.source, async(source) => {
-  if (!source) return
-  // const source = (await getLeaderboardSetting()).source as LX.OnlineSource
-  let tagInfo = tags[source]
-  // console.log(await getTags(source))
-  if (tagInfo == null) setTags(tagInfo = await getTags(source), source)
-
-  list.splice(0, list.length, ...[{ name: window.i18n.t('songlist__tag_info_hot_tag'), list: [...tagInfo.hotTag] }, ...tagInfo.tags])
-}, {
+watch(() => props.source, loadTags, {
   immediate: true,
 })
 const tagName = computed(() => {
@@ -91,7 +117,7 @@ const setTagPopupWidth = () => {
   }, 50)
 }
 
-const dom_btn = ref<HTMLElement | null>(null)
+const dom_btn = ref(null)
 const popupVisible = ref(false)
 const handleShow = () => popupVisible.value = !popupVisible.value
 const handleHide = (evt) => {
@@ -109,6 +135,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  tagsRequestId++
   document.removeEventListener('click', handleHide)
   window.removeEventListener('resize', setTagPopupWidth)
 })

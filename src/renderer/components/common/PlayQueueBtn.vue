@@ -42,7 +42,7 @@
                 <svg v-if="!getCover(item) || imgErrorSet.has(item.key)" version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" width="60%" height="60%" viewBox="0 0 24 24" space="preserve">
                   <use xlink:href="#icon-music" />
                 </svg>
-                <img v-else :src="getCover(item)" :alt="getMusicName(item)" loading="eager" decoding="async" @error="handleImgError(item.key)" />
+                <common-cover-image v-else :src="getCover(item)" :size="rowHeight" :alt="getMusicName(item)" @error="handleImgError(item.key)" />
               </div>
               <div :class="$style.itemInfo">
                 <div :class="$style.itemName">{{ getMusicName(item) }}</div>
@@ -549,19 +549,19 @@ onBeforeUnmount(() => {
 }
 
 :global(.queue-panel-enter-active) {
-  transition: var(--duration-normal) var(--ease-emphasized);
+  transition: var(--duration-popup) var(--ease-emphasized);
   transition-property: opacity, transform;
 }
 
 :global(.queue-panel-leave-active) {
-  transition: var(--duration-fast) var(--ease-standard);
+  transition: var(--duration-popup) var(--ease-standard);
   transition-property: opacity, transform;
 }
 
 :global(.queue-panel-enter-from),
 :global(.queue-panel-leave-to) {
   opacity: 0;
-  transform: translateY(8px);
+  transform: translateY(10px) scale(.98);
 }
 
 </style>

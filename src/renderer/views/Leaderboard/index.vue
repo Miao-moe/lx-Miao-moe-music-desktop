@@ -6,9 +6,9 @@
       </div>
       <BoardList ref="boardListRef" :board-id="boardId" :source="source" @show-menu="$refs.musicListRef?.hideMenu()" />
     </div>
-    <div :class="$style.list">
+    <common-motion-view :class="$style.list" :motion-key="`${source}:${boardId}`">
       <MusicList ref="musicListRef" :source="source" :board-id="boardId" @show-menu="$refs.boardListRef?.hideMenu()" />
-    </div>
+    </common-motion-view>
   </div>
 </template>
 

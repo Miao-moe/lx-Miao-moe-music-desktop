@@ -42,7 +42,8 @@
       </ul>
       <p v-else :class="$style.searchEmpty">{{ $t('setting__filter_empty') }}</p>
     </div>
-    <div ref="dom_content_ref" class="scroll" :class="[$style.setting, {[$style.searchFiltering]: isFiltering}]">
+    <common-motion-view :motion-key="avtiveComponentName" :distance="24">
+      <div ref="dom_content_ref" class="scroll" :class="[$style.setting, {[$style.searchFiltering]: isFiltering}]">
       <p v-if="isFiltering && !visibleTocList.length" :class="$style.contentEmpty">{{ $t('setting__filter_empty') }}</p>
       <dl v-show="visibleTocList.length">
         <component :is="avtiveComponentName" />
@@ -62,7 +63,8 @@
         <SettingUpdate />
         <SettingAbout /> -->
       </dl>
-    </div>
+      </div>
+    </common-motion-view>
   </div>
 </template>
 

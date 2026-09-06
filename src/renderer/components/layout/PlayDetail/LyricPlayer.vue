@@ -135,6 +135,7 @@ export default {
     const lrcStyles = computed(() => {
       return {
         textAlign: appSetting['playDetail.style.align'],
+        '--lyric-transform-origin': appSetting['playDetail.style.align'],
       }
     })
     const lrcFontSize = computed(() => {
@@ -275,12 +276,16 @@ export default {
 .lrcActiveZoom {
   :global {
     .line-content {
+      .line {
+        transform-origin: var(--lyric-transform-origin, center) center;
+        transition: transform var(--duration-normal) var(--ease-standard);
+      }
       &.active {
         .extended {
           font-size: .94em;
         }
         .line {
-          font-size: 1.1em;
+          transform: scale(1.1);
         }
       }
     }

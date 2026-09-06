@@ -125,9 +125,9 @@ onBeforeUnmount(() => {
   border-radius: var(--radius-md);
   background-color: var(--color-surface-elevated);
   opacity: 0;
-  transform: translateY(-4px) scale(.98);
+  transform: translateY(-10px) scale(.98);
   transform-origin: 50% 0 0;
-  transition: var(--duration-fast) var(--ease-standard);
+  transition: var(--duration-popup) var(--ease-standard);
   transition-property: transform, opacity;
   max-height: 250px;
   z-index: 10;
@@ -154,7 +154,7 @@ onBeforeUnmount(() => {
   }
 
   &.top {
-    transform: translateY(4px) scale(.98);
+    transform: translateY(10px) scale(.98);
     transform-origin: 50% 100% 0;
 
     &.active {

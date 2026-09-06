@@ -49,7 +49,8 @@ export const DATA_KEYS = {
   songListSetting: 'songListSetting',
   searchSetting: 'searchSetting',
 
-  lastStartInfo: 'lastStartInfo',
+  // 降级判断只读取 LX-M 自己的记录，不继承 LX 的 lastStartInfo。
+  lastStartInfo: 'lx-m:lastStartInfo',
 } as const
 
 export const DEFAULT_SETTING = {

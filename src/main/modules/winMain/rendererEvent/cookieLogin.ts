@@ -34,17 +34,17 @@ const COOKIE_LOGIN_DEFINITIONS: Record<MusicSource, CookieLoginDefinition> = {
   tx: {
     url: 'https://y.qq.com/',
     domains: ['qq.com'],
-    cookieGroups: [['uin', 'qqmusic_key']],
+    cookieGroups: [['uin', 'qqmusic_key'], ['wxuin', 'qqmusic_key']],
   },
   kg: {
     url: 'https://www.kugou.com/',
     domains: ['kugou.com'],
-    cookieGroups: [['KuGoo'], ['kg_mid', 'kg_user_v']],
+    cookieGroups: [['KuGoo']],
   },
   kw: {
     url: 'https://www.kuwo.cn/',
     domains: ['kuwo.cn'],
-    cookieGroups: [['kw_token'], ['userid']],
+    cookieGroups: [['userid']],
   },
   mg: {
     url: 'https://music.migu.cn/v5/',

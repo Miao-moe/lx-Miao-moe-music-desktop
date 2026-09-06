@@ -3,11 +3,11 @@
     <div v-show="!props.listInfo.noItemLabel" ref="dom_list_ref" :class="$style.listContent" class="scroll">
       <ul>
         <li
-          v-for="item in props.listInfo.list" :key="getItemKey(item)" :class="$style.item" role="button" tabindex="0"
+          v-for="(item, index) in props.listInfo.list" :key="getItemKey(item)" :class="$style.item" role="button" tabindex="0"
           :aria-label="item.name" @click="toDetail(item)" @keydown.enter.space.prevent="toDetail(item)"
         >
           <div :class="$style.image">
-            <img v-if="item.img && !imageErrorSet.has(getItemKey(item))" :class="$style.img" loading="lazy" decoding="async" :src="item.img" :alt="item.name" @error="imageErrorSet.add(getItemKey(item))">
+            <common-cover-image v-if="item.img && !imageErrorSet.has(getItemKey(item))" :class="$style.img" :loading="Number(index) < 6 ? 'eager' : 'lazy'" :size="160" :src="item.img" :alt="item.name" @error="imageErrorSet.add(getItemKey(item))" />
             <svg v-else version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" viewBox="0 0 24 24" space="preserve">
               <use xlink:href="#icon-music" />
             </svg>

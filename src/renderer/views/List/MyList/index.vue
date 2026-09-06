@@ -15,7 +15,7 @@
         </button>
       </div>
     </div>
-    <ul ref="dom_lists_list" class="scroll" :class="[$style.listsContent, { [$style.sortable]: isModDown }]">
+    <ul ref="dom_lists_list" class="scroll" :class="[$style.listsContent, { [$style.sortable]: isModDown || isDragging }]">
       <li
         class="default-list" :class="[$style.listsItem, {[$style.active]: defaultList.id == listId}, {[$style.clicked]: rightClickItemIndex == -2}, {[$style.fetching]: fetchingListStatus[defaultList.id]}]"
         :aria-label="$t(defaultList.name)" :aria-selected="defaultList.id == listId"
@@ -45,31 +45,46 @@
           {{ $t(loveList.name) }}
         </span>
       </li>
-      <li
-        v-for="(item, index) in userLists"
-        :key="item.id" class="user-list"
-        :class="[$style.listsItem, {[$style.active]: item.id == listId}, {[$style.clicked]: rightClickItemIndex == index}, {[$style.fetching]: fetchingListStatus[item.id]}]"
-        :data-index="index" :aria-label="item.name" :aria-selected="defaultList.id == listId" @contextmenu="handleListsItemRigthClick($event, index)"
-      >
-        <span :class="$style.listsLabel" @click="handleListToggle(item.id, index + 2)">
-          <transition name="list-active">
-            <svg-icon v-if="item.id == listId" name="angle-right-solid" :class="$style.activeIcon" />
-          </transition>
-          {{ item.name }}
-        </span>
-        <base-input
-          :class="$style.listsInput" type="text" :value="item.name"
-          :placeholder="item.name" @keyup.enter="handleSaveListName(index, $event)" @blur="handleSaveListName(index, $event)"
-        />
-      </li>
-      <transition enter-active-class="animated-fast slideInLeft" leave-active-class="animated-fast fadeOut" @after-leave="isNewListLeave = false" @after-enter="$refs.dom_listsNewInput.focus()">
-        <li v-if="isShowNewList" :class="[$style.listsItem, $style.listsNew, {[$style.newLeave]: isNewListLeave}]">
-          <base-input
-            ref="dom_listsNewInput" :class="$style.listsInput" type="text" :placeholder="$t('lists__new_list_input')"
-            @keyup.enter="handleCreateList" @blur="handleCreateList"
-          />
+      <template v-for="group in listGroups" :key="group.id">
+        <li v-if="group.source" :class="$style.folderHeader">
+          <button type="button" :aria-expanded="!!expandedFolders[group.source]" @click="handleFolderToggle(group.source)">
+            <svg-icon name="angle-right-solid" :class="[$style.folderArrow, { [$style.folderExpanded]: expandedFolders[group.source] }]" />
+            <svg :class="$style.folderIcon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 5h7l2 2h9v13H3z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+            </svg>
+            <span :class="$style.folderName">{{ group.name }}</span>
+            <span :class="$style.folderCount">{{ group.lists.length }}</span>
+          </button>
         </li>
-      </transition>
+        <template v-if="!group.source || expandedFolders[group.source]">
+          <li
+            v-for="{ item, index, name } in group.lists"
+            :key="item.id" class="user-list"
+            :class="[$style.listsItem, {[$style.folderListItem]: group.source}, {[$style.active]: item.id == listId}, {[$style.clicked]: rightClickItemIndex == index}, {[$style.fetching]: fetchingListStatus[item.id]}]"
+            :data-id="item.id" :data-index="index" :data-group="group.id" :aria-label="item.name" :aria-selected="item.id == listId" @contextmenu="handleListsItemRigthClick($event, index)"
+          >
+            <span :class="$style.listsLabel" @click="handleListToggle(item.id)">
+              <transition name="list-active">
+                <svg-icon v-if="item.id == listId" name="angle-right-solid" :class="$style.activeIcon" />
+              </transition>
+              {{ name }}
+            </span>
+            <base-input
+              :class="$style.listsInput" type="text" :value="item.name"
+              :placeholder="item.name" @keyup.enter="handleSaveListName(index, $event)" @blur="handleSaveListName(index, $event)"
+            />
+          </li>
+          <li v-if="group.source && !group.lists.length" :class="$style.folderEmpty">{{ $t('lists__folder_empty') }}</li>
+        </template>
+        <transition v-if="!group.source" enter-active-class="animated-fast slideInLeft" leave-active-class="animated-fast fadeOut" @after-leave="isNewListLeave = false" @after-enter="focusNewListInput">
+          <li v-if="isShowNewList" :class="[$style.listsItem, $style.listsNew, {[$style.newLeave]: isNewListLeave}]">
+            <base-input
+              :class="$style.listsInput" type="text" :placeholder="$t('lists__new_list_input')"
+              @keyup.enter="handleCreateList" @blur="handleCreateList"
+            />
+          </li>
+        </transition>
+      </template>
     </ul>
     <base-menu v-model="isShowMenu" :menus="menus" :xy="menuLocation" item-name="name" @menu-click="handleMenuClick" />
     <DuplicateMusicModal v-model:visible="isShowDuplicateMusicModal" :list-info="duplicateListInfo" />
@@ -89,7 +104,7 @@ import ListUpdateModal from './components/ListUpdateModal.vue'
 import { defaultList, loveList, userLists, fetchingListStatus } from '@renderer/store/list/state'
 import { removeUserList } from '@renderer/store/list/action'
 
-import { ref, watch } from '@common/utils/vueTools'
+import { computed, ref, watch, useCssModule } from '@common/utils/vueTools'
 import { useRouter } from '@common/utils/vueRouter'
 import { LIST_IDS } from '@common/constants'
 
@@ -108,6 +123,7 @@ import useDarg from './useDarg'
 import useEditList from './useEditList'
 import useListScroll from './useListScroll'
 import useDuplicate from './useDuplicate'
+import useFolders from './useFolders'
 
 export default {
   name: 'MyLists',
@@ -129,12 +145,21 @@ export default {
 
     const dom_lists_list = ref(null)
     const rightClickItemIndex = ref(-10)
+    const styles = useCssModule()
+    const { listGroups, expandedFolders, toggleFolder } = useFolders({ listId: computed(() => props.listId) })
 
     const { handleImportList, handleExportList } = useShare()
     const { isShowListUpdateModal, handleUpdateSourceList } = useListUpdate()
     const { isShowListSortModal, sortListInfo, handleSortList } = useSort()
     const { isShowDuplicateMusicModal, duplicateListInfo, handleDuplicateList } = useDuplicate()
     const { handleRename, handleSaveListName, isShowNewList, isNewListLeave, handleCreateList } = useEditList({ dom_lists_list })
+    const handleFolderToggle = async(source) => {
+      await handleSaveListName()
+      toggleFolder(source)
+    }
+    const focusNewListInput = () => {
+      dom_lists_list.value?.querySelector(`.${styles.listsNew} input`)?.focus()
+    }
     useListScroll({ dom_lists_list })
 
     const handleOpenSourceDetailPage = async(listInfo) => {
@@ -203,7 +228,7 @@ export default {
       menuClick(action, index)
     }
 
-    const { isModDown } = useDarg({ dom_lists_list, handleMenuClick, handleSaveListName })
+    const { isModDown, isDragging } = useDarg({ dom_lists_list, handleMenuClick, handleSaveListName })
 
 
     watch(() => props.listId, (listId) => {
@@ -225,6 +250,10 @@ export default {
       defaultList,
       loveList,
       userLists,
+      listGroups,
+      expandedFolders,
+      handleFolderToggle,
+      focusNewListInput,
       fetchingListStatus,
       dom_lists_list,
       isShowListUpdateModal,
@@ -243,6 +272,7 @@ export default {
       menuLocation,
       handleListToggle,
       isModDown,
+      isDragging,
       hideMenu: handleMenuClick,
     }
   },
@@ -311,17 +341,19 @@ export default {
   // border-right: 1px solid rgba(0, 0, 0, 0.12);
 
   &.sortable {
-    * {
-      -webkit-user-drag: element;
-    }
-
     .listsItem {
       &:hover, &.active, &.selected, &.clicked {
         background-color: transparent !important;
       }
 
-      &.dragingItem {
+      &.chosenItem, &.dragingItem {
         background-color: var(--color-primary-background-hover) !important;
+        cursor: grabbing !important;
+        box-shadow: inset 3px 0 var(--color-primary);
+      }
+
+      &.dragingItem {
+        opacity: .35;
       }
     }
   }
@@ -366,6 +398,63 @@ export default {
   width: .9em;
   margin-left: -0.45em;
   vertical-align: -0.05em;
+}
+.folderHeader {
+  button {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    width: 100%;
+    height: @lists-item-height;
+    padding: 0 10px;
+    border: none;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+    &:hover, &:focus-visible {
+      background-color: var(--color-primary-background-hover);
+    }
+  }
+}
+.folderArrow {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  transition: transform .15s ease;
+  &.folderExpanded {
+    transform: rotate(90deg);
+  }
+}
+.folderIcon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--color-primary);
+}
+.folderName {
+  flex: auto;
+  font-size: 12px;
+  .mixin-ellipsis-1();
+}
+.folderCount {
+  flex: none;
+  color: var(--color-font-label);
+  font-size: 11px;
+}
+.folderListItem {
+  .listsLabel {
+    padding-left: 28px;
+  }
+  &.editing {
+    padding-left: 28px;
+  }
+}
+.folderEmpty {
+  padding: 8px 10px 8px 28px;
+  color: var(--color-font-label);
+  font-size: 11px;
+  line-height: 1.5;
 }
 .listsLabel {
   display: block;

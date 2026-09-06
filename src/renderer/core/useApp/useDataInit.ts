@@ -11,6 +11,7 @@ import { appSetting } from '@renderer/store/setting'
 import { playMusicInfo } from '@renderer/store/player/state'
 import { initDislikeInfo, registerRemoteDislikeAction } from '@renderer/core/dislikeList'
 import { syncCookieListsOnStartup } from '@renderer/utils/cookieSync'
+import { getListPrevSelectId } from '@renderer/utils/data'
 
 const initPrevPlayInfo = async() => {
   const info = await getPlayInfo()
@@ -42,16 +43,22 @@ export default () => {
   })
 
   return async() => {
+    unregister = registerAction((ids) => {
+      window.app_event.myListUpdate(ids)
+    })
+    // Local playlists can render while custom APIs are still initializing.
+    const initLocalLists = async() => {
+      window.lxData.userLists = await getUserLists()
+      const previousId = await getListPrevSelectId()
+      await getListMusics(previousId)
+    }
     await Promise.all([
-      initUserApi(), // 自定义API
+      initUserApi().catch(err => { log.error(err) }), // 自定义API
+      initLocalLists(),
     ]).catch(err => {
       log.error(err)
     })
     void music.init() // 初始化音乐sdk
-    unregister = registerAction((ids) => {
-      window.app_event.myListUpdate(ids)
-    })
-    window.lxData.userLists = await getUserLists() // 获取用户列表
     unregisterDislikeEvent = registerRemoteDislikeAction()
     await initDislikeInfo() // 获取不喜欢列表
     await initPrevPlayInfo().catch(err => {

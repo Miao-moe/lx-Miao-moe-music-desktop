@@ -41,10 +41,12 @@ dd(v-for="item in sources" :key="item.id")
       )
     .p(style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;")
       base-btn.btn(min :disabled="loginBusy(item.id)" @click="handleLogin(item)") {{ loginBusy(item.id) ? $t('setting__cookie_login_running') : $t('setting__cookie_login') }}
+      base-btn.btn(min :disabled="testStates[item.id]?.busy || loginBusy(item.id) || syncing" @click="handleTestPlaylists(item.id)") {{ testStates[item.id]?.busy ? $t('setting__cookie_test_running') : $t('setting__cookie_test') }}
       base-btn.btn(min @click="handleClear(item.id)") {{ $t('setting__cookie_clear') }}
       span(v-if="appSetting[item.settingKey]" :style="{ color: isValid(item.id) ? 'var(--color-primary)' : 'var(--color-font-label)', fontSize: '12px' }")
         | {{ isValid(item.id) ? $t('setting__cookie_status_valid') : $t('setting__cookie_status_invalid') }}
       span(v-if="loginTip(item.id)" :style="{ color: loginError(item.id) ? 'var(--color-font-label)' : 'var(--color-primary)', fontSize: '12px' }") {{ loginTip(item.id) }}
+    p(v-if="testStates[item.id]?.tip" role="status" :style="{ color: testStates[item.id].error ? 'var(--color-font-label)' : 'var(--color-primary)', fontSize: '12px' }") {{ testStates[item.id].tip }}
 
 </template>
 
@@ -56,7 +58,7 @@ import {
   SOURCE_NAME,
   isCookieValid,
 } from '@renderer/utils/cookieManager'
-import { syncAllPlaylists, syncCookiePlaylists } from '@renderer/utils/cookieSync'
+import { checkCookiePlaylists, syncAllPlaylists, syncCookiePlaylists } from '@renderer/utils/cookieSync'
 import { loginCookie } from '@renderer/utils/ipc'
 
 export default {
@@ -67,12 +69,34 @@ export default {
     const sources = [
       { id: 'wy', name: SOURCE_NAME.wy, settingKey: 'cookie.wy', placeholder: 'MUSIC_U=xxx; __csrf=xxx; ...' },
       { id: 'tx', name: SOURCE_NAME.tx, settingKey: 'cookie.tx', placeholder: 'uin=xxx; qqmusic_key=xxx; ...' },
-      { id: 'kg', name: SOURCE_NAME.kg, settingKey: 'cookie.kg', placeholder: 'kg_mid=xxx; kg_user_v=xxx; ...' },
-      { id: 'kw', name: SOURCE_NAME.kw, settingKey: 'cookie.kw', placeholder: 'kw_token=xxx; Hm_lvt_xxx=xxx; ...' },
+      { id: 'kg', name: SOURCE_NAME.kg, settingKey: 'cookie.kg', placeholder: 'KuGoo=KugooID=xxx&t=xxx; kg_mid=xxx; ...' },
+      { id: 'kw', name: SOURCE_NAME.kw, settingKey: 'cookie.kw', placeholder: 'userid=xxx; kw_token=xxx; ...' },
       { id: 'mg', name: SOURCE_NAME.mg, settingKey: 'cookie.mg', placeholder: 'migu_music_sid=xxx; USER_ID=xxx; ...' },
     ]
 
     const isValid = (id) => isCookieValid(id)
+    const testStates = reactive({})
+    const resetTest = (id) => {
+      testStates[id] = { busy: false, tip: '', error: false }
+    }
+    const handleTestPlaylists = async(id) => {
+      if (testStates[id]?.busy) return
+      const state = reactive({ busy: true, tip: '', error: false })
+      testStates[id] = state
+      const cookie = appSetting[`cookie.${id}`]
+      try {
+        const result = await checkCookiePlaylists(id)
+        if (testStates[id] !== state || appSetting[`cookie.${id}`] !== cookie) return
+        testStates[id] = {
+          busy: false,
+          tip: t(`setting__cookie_test_${result.status}`, { count: String(result.listCount) }),
+          error: result.status !== 'success',
+        }
+      } catch {
+        if (testStates[id] !== state || appSetting[`cookie.${id}`] !== cookie) return
+        testStates[id] = { busy: false, tip: t('setting__cookie_test_failed'), error: true }
+      }
+    }
 
     const cookieSaveTimers = new Map()
 
@@ -89,6 +113,7 @@ export default {
       const item = sources.find(s => s.id === id)
       if (!item) return
       appSetting[item.settingKey] = value
+      resetTest(id)
       saveCookie(item.settingKey, value)
     }
 
@@ -101,6 +126,7 @@ export default {
         cookieSaveTimers.delete(item.settingKey)
       }
       appSetting[item.settingKey] = ''
+      resetTest(id)
       updateSetting({ [item.settingKey]: '' })
     }
 
@@ -115,6 +141,7 @@ export default {
       try {
         const { cookie, playlists } = await loginCookie(item.id)
         appSetting[item.settingKey] = cookie
+        resetTest(item.id)
         updateSetting({ [item.settingKey]: cookie })
         loginStates[item.id] = { busy: false, tip: t('setting__cookie_login_done'), error: false }
 
@@ -189,6 +216,8 @@ export default {
       updateSetting,
       sources,
       isValid,
+      testStates,
+      handleTestPlaylists,
       handleCookieChange,
       handleClear,
       loginBusy,

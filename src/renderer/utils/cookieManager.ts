@@ -88,19 +88,19 @@ export const getCookieValue = (cookie: string, name: string): string | null => {
  *
  * 简单启发式判断：
  *   - 网易云：检查 `MUSIC_U` 字段是否存在
- *   - QQ 音乐：检查 `uin` / `qqmusic_key` 字段是否存在
- *   - 酷狗：检查 `KuGoo` / `kg_mid` / `kg_user_v` 字段是否存在
- *   - 酷我：检查 `kw_token` / `userid` 字段是否存在
+ *   - QQ 音乐：检查 `uin`（或 `wxuin`）和 `qqmusic_key` 字段是否存在
+ *   - 酷狗：检查同步接口所需的 `KuGoo` 登录字段是否存在
+ *   - 酷我：检查同步接口所需的 `userid` 字段是否存在
  *   - 咪咕：检查 `mg_auth_sid` / `migu_music_sid` / `USER_ID` 字段是否存在
  */
 export const isCookieValid = (source: MusicSource, cookie?: string): boolean => {
   const c = cookie ?? getCookie(source)
   if (!c.trim()) return false
   switch (source) {
-    case 'wy': return !!getCookieValue(c, 'MUSIC_U') || !!getCookieValue(c, '__csrf')
-    case 'tx': return !!getCookieValue(c, 'uin') && !!getCookieValue(c, 'qqmusic_key')
-    case 'kg': return !!getCookieValue(c, 'KuGoo') || !!getCookieValue(c, 'kg_mid') || !!getCookieValue(c, 'kg_user_v')
-    case 'kw': return !!getCookieValue(c, 'kw_token') || !!getCookieValue(c, 'userid') || c.includes('Hm_lvt_')
+    case 'wy': return !!getCookieValue(c, 'MUSIC_U')
+    case 'tx': return !!(getCookieValue(c, 'uin') ?? getCookieValue(c, 'wxuin')) && !!getCookieValue(c, 'qqmusic_key')
+    case 'kg': return !!getCookieValue(c, 'KuGoo')
+    case 'kw': return !!getCookieValue(c, 'userid')
     case 'mg': return !!getCookieValue(c, 'mg_auth_sid') || !!getCookieValue(c, 'migu_music_sid') || !!getCookieValue(c, 'USER_ID')
   }
 }

@@ -1,5 +1,5 @@
 <template>
-  <div :class="$style.view">
+  <common-motion-view :class="$style.view" :motion-key="$route.name" :distance="24" page>
     <router-view v-slot="{ Component, route }">
       <!-- Vue 3.3.13 的 transition 包裹动态路由组件会反复触发渲染器崩溃
            （insertBefore / parentNode null / 导航卡死），保持禁用，勿重新启用 -->
@@ -7,7 +7,7 @@
         <component :is="Component" :key="route.name" class="view-container" />
       </error-boundary>
     </router-view>
-  </div>
+  </common-motion-view>
 </template>
 
 <script>
@@ -26,7 +26,7 @@ export default {
 .view {
   position: relative;
   z-index: 1;
-  > :global(.view-container) {
+  > :global([data-motion-outlet]) > :global(.view-container) {
     position: absolute !important;
     left: 0;
     top: 0;

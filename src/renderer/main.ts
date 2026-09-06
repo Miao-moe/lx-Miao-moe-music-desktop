@@ -17,11 +17,12 @@ import router from './router'
 // import store from './store'
 
 
-import { getSetting, updateSetting } from './utils/ipc'
+import { getEnvParams, getSetting, updateSetting } from './utils/ipc'
 import { langList } from '@root/lang'
 import type { I18n } from '@root/lang/i18n'
 
 import { initSetting } from './store/setting'
+import { versionInfo } from './store'
 // import { bubbleCursor } from './utils/cursor-effects/bubbleCursor'
 
 import './worker'
@@ -38,7 +39,10 @@ router.afterEach((to) => {
   }
 })
 
-void getSetting().then(setting => {
+void Promise.all([getSetting(), getEnvParams()]).then(([setting, { appVersion }]) => {
+  process.versions.app = appVersion
+  versionInfo.version = appVersion
+
   // window.lx.appSetting = setting
   // Set language automatically
   if (!setting['common.langId'] || !window.i18n.availableLocales.includes(setting['common.langId'])) {

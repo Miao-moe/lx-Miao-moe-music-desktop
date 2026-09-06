@@ -1,33 +1,40 @@
-<template lang="pug">
-transition(enter-active-class="animated slideInRight" leave-active-class="animated slideOutDown" @after-enter="handleAfterEnter" @after-leave="handleAfterLeave")
-  div(v-if="isShowPlayerDetail" :class="[$style.container, { fullscreen: isFullscreen }]" @contextmenu="handleContextMenu")
-    div(:class="$style.bg")
-    //- div(:class="$style.bg" :style="bgStyle")
-    //- div(:class="$style.bg2")
-    ControlBtnsLeftHeader(v-if="appSetting['common.controlBtnPosition'] == 'left'")
-    ControlBtnsRightHeader(v-else)
-    div(:class="[$style.main, {[$style.showComment]: isShowPlayComment}]")
-      div.left(:class="$style.left")
-        //- div(:class="$style.info")
-        div(:class="$style.info")
-          img(v-if="musicInfo.pic" :class="$style.img" :src="musicInfo.pic")
-          div.description(:class="['scroll', $style.description]")
-            p {{ $t('player__music_name') }}{{ musicInfo.name }}
-            p {{ $t('player__music_singer') }}{{ musicInfo.singer }}
-            p(v-if="musicInfo.album") {{ $t('player__music_album') }}{{ musicInfo.album }}
-
-      transition(enter-active-class="animated fadeIn" leave-active-class="animated fadeOut")
-        LyricPlayer(v-if="visibled")
-      music-comment(v-if="visibled" :class="$style.comment" :show="isShowPlayComment" :music-info="playMusicInfo.musicInfo" @close="hideComment")
-    transition(enter-active-class="animated fadeIn" leave-active-class="animated fadeOut")
-      play-bar(v-if="visibled")
-    transition(enter-active-class="animated-slow fadeIn" leave-active-class="animated-slow fadeOut")
-      common-audio-visualizer(v-if="appSetting['player.audioVisualization'] && visibled")
+<template>
+  <div
+    v-if="detailMounted" v-show="detailDisplayed" ref="detailRoot" data-player-detail
+    :class="[$style.container, { fullscreen: isFullscreen }]" :aria-hidden="!isShowPlayerDetail"
+    :inert="!isShowPlayerDetail ? '' : null" @contextmenu="handleContextMenu"
+  >
+    <div :class="$style.bg" />
+    <AmbientBackground v-if="visibled" :cover="musicInfo.pic" />
+    <ControlBtnsLeftHeader v-if="appSetting['common.controlBtnPosition'] == 'left'" data-detail-part="chrome" />
+    <ControlBtnsRightHeader v-else data-detail-part="chrome" />
+    <div :class="[$style.main, {[$style.showComment]: isShowPlayComment}]">
+      <div class="left" :class="$style.left">
+        <div :class="$style.info">
+          <img
+            v-if="musicInfo.pic" ref="detailCover" :class="[$style.img, {[$style.coverTravelling]: coverTravelling}]" :src="musicInfo.pic"
+            @mousemove="handleCoverMove" @mouseleave="resetCoverTilt"
+          >
+          <div class="description scroll" :class="$style.description" data-detail-part="info">
+            <p>{{ $t('player__music_name') }}{{ musicInfo.name }}</p>
+            <p>{{ $t('player__music_singer') }}{{ musicInfo.singer }}</p>
+            <p v-if="musicInfo.album">{{ $t('player__music_album') }}{{ musicInfo.album }}</p>
+          </div>
+        </div>
+      </div>
+      <LyricPlayer v-if="visibled" data-detail-part="lyrics" />
+      <music-comment v-if="visibled" :class="$style.comment" :show="isShowPlayComment" :music-info="playMusicInfo.musicInfo" @close="hideComment" />
+    </div>
+    <play-bar v-if="visibled" data-detail-part="controls" />
+    <common-audio-visualizer v-if="appSetting['player.audioVisualization'] && visibled" />
+  </div>
 </template>
 
 
 <script>
-import { ref, watch } from '@common/utils/vueTools'
+import { watch } from '@common/utils/vueTools'
+import usePlayerDetailMotion from '@renderer/utils/compositions/usePlayerDetailMotion'
+import AmbientBackground from './AmbientBackground.vue'
 import { isFullscreen } from '@renderer/store'
 import {
   isShowPlayerDetail,
@@ -52,6 +59,7 @@ import { closeWindow, maxWindow, minWindow, setFullScreen } from '@renderer/util
 export default {
   name: 'CorePlayDetail',
   components: {
+    AmbientBackground,
     ControlBtnsLeftHeader,
     ControlBtnsRightHeader,
     LyricPlayer,
@@ -59,8 +67,6 @@ export default {
     MusicComment,
   },
   setup() {
-    const visibled = ref(false)
-
     let clickTime = 0
 
     const hide = () => {
@@ -81,17 +87,16 @@ export default {
 
     const handleAfterEnter = () => {
       if (isFullscreen.value) registerAutoHideMounse()
-
-      visibled.value = true
     }
 
     const handleAfterLeave = () => {
       setShowPlayLrcSelectContentLrc(false)
       hideComment(false)
-      visibled.value = false
 
       unregisterAutoHideMounse()
     }
+
+    const detailMotion = usePlayerDetailMotion({ onOpened: handleAfterEnter, onClosed: handleAfterLeave })
 
     watch(isFullscreen, isFullscreen => {
       (isFullscreen ? registerAutoHideMounse : unregisterAutoHideMounse)()
@@ -109,7 +114,7 @@ export default {
       hideComment,
       handleAfterEnter,
       handleAfterLeave,
-      visibled,
+      ...detailMotion,
       isFullscreen,
       fullscreenExit() {
         void setFullScreen(false).then((fullscreen) => {
@@ -253,6 +258,10 @@ export default {
   box-shadow: 0 0 6px var(--color-primary-alpha-500);
   border-radius: 6px;
   opacity: .8;
+  transition: transform var(--duration-normal) var(--ease-standard);
+}
+.coverTravelling {
+  visibility: hidden;
 }
 .description {
   max-width: 300px;

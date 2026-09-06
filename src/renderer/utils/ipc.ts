@@ -3,6 +3,7 @@ import { HOTKEY_RENDERER_EVENT_NAME, WIN_MAIN_RENDERER_EVENT_NAME, CMMON_EVENT_N
 import { markRaw } from '@common/utils/vueTools'
 import * as hotKeys from '@common/hotKey'
 import { APP_EVENT_NAMES, DATA_KEYS, DEFAULT_SETTING } from '@common/constants'
+import { clearArtworkCache, getArtworkCacheSize } from './artworkStorage'
 
 type RemoveListener = () => void
 
@@ -185,7 +186,7 @@ export const saveLastStartInfo = (version: string) => {
     data: version,
   })
 }
-// 获取最后一次启动时的版本号
+// 获取 LX-M 最后一次启动时的版本号
 export const getLastStartInfo = async() => {
   return rendererInvoke<string, string | null>(WIN_MAIN_RENDERER_EVENT_NAME.get_data, DATA_KEYS.lastStartInfo)
 }
@@ -533,14 +534,15 @@ export const openDirInExplorer = async(path: string) => {
  * 获取缓存大小
  */
 export const getCacheSize = async() => {
-  return rendererInvoke<number>(WIN_MAIN_RENDERER_EVENT_NAME.get_cache_size)
+  const sizes = await Promise.all([rendererInvoke<number>(WIN_MAIN_RENDERER_EVENT_NAME.get_cache_size), getArtworkCacheSize()])
+  return sizes[0] + sizes[1]
 }
 
 /**
  * 清除缓存
  */
 export const clearCache = async() => {
-  await rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.clear_cache)
+  await Promise.all([rendererInvoke(WIN_MAIN_RENDERER_EVENT_NAME.clear_cache), clearArtworkCache()])
 }
 
 /**

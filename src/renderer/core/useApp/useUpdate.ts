@@ -8,6 +8,7 @@ import {
   saveLastStartInfo,
 } from '@renderer/utils/ipc'
 import { compareVer } from '@common/utils'
+import { APP_NAME } from '@common/constants'
 import { isShowChangeLog, versionInfo } from '@renderer/store'
 import { getVersionInfo } from '@renderer/utils/update'
 import { dialog } from '@renderer/plugins/Dialog'
@@ -27,7 +28,7 @@ export default () => {
       if (version) {
         if (compareVer(process.versions.app, version) < 0) {
           void dialog({
-            message: window.i18n.t('update__downgrade_tip', { ver: `${version} -> ${process.versions.app}` }),
+            message: window.i18n.t('update__downgrade_tip', { name: APP_NAME, ver: `${version} -> ${process.versions.app}` }),
             confirmButtonText: window.i18n.t('update__ignore_confirm_tip_confirm'),
           })
           return

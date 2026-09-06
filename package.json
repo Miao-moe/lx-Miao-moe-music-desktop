@@ -1,6 +1,6 @@
 {
   "name": "lx-m-music-desktop",
-  "version": "1.3.3",
+  "version": "2.0.0",
   "productName": "LX-M Music",
   "description": "一个免费的音乐查找助手",
   "main": "./dist/main.js",
@@ -55,6 +55,7 @@
     "publish:linux:appImage": "node build-config/build-pack.js target=linux arch=x64 type=appImage publish=always",
     "publish:linux:rpm": "node build-config/build-pack.js target=linux arch=x64 type=rpm publish=always",
     "publish:linux:pacman": "node build-config/build-pack.js target=linux arch=x64 type=pacman publish=always",
+    "predev": "electron-builder install-app-deps",
     "dev": "cross-env NODE_OPTIONS=--max-http-header-size=200000 node build-config/runner-dev.js",
     "build:theme": "node src/common/theme/createThemes.js",
     "build": "node build-config/pack.js",
@@ -62,6 +63,7 @@
     "build:renderer": "cross-env NODE_ENV=production webpack --config build-config/renderer/webpack.config.prod.js --progress",
     "build:renderer-lyric": "cross-env NODE_ENV=production webpack --config build-config/renderer-lyric/webpack.config.prod.js --progress",
     "build:renderer-scripts": "cross-env NODE_ENV=production webpack --config build-config/renderer-scripts/webpack.config.prod.js --progress",
+    "test:request": "node --test tests/request.production.test.cjs",
     "lint": "eslint --ext .ts,.js,.vue -f node_modules/eslint-formatter-friendly src",
     "lint:fix": "eslint --ext .ts,.js,.vue -f node_modules/eslint-formatter-friendly --fix src",
     "postinstall": "electron-builder install-app-deps",

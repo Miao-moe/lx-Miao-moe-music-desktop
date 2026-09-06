@@ -17,6 +17,14 @@ dd
         @update:model-value="updateSetting({ 'ui.smoothAnimation': $event })"
       )
       svg-icon.help-icon(name="help-circle-outline" :aria-label="$t('setting__advanced_ui_smooth_anim_tip')")
+    .gap-top
+      base-checkbox(
+        id="setting_advanced_ui_follow_system_motion"
+        :model-value="appSetting['ui.followSystemMotion']"
+        :label="$t('setting__advanced_ui_follow_system_motion')"
+        @update:model-value="updateSetting({ 'ui.followSystemMotion': $event })"
+      )
+      svg-icon.help-icon(name="help-circle-outline" :aria-label="$t('setting__advanced_ui_follow_system_motion_tip')")
 
 dd
     .p.gap-top

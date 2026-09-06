@@ -19,6 +19,7 @@ export const initGlobalData = () => {
   // envParams.cmdParams.dt = !!envParams.cmdParams.dt
 
   global.envParams = {
+    appVersion: app.getVersion(),
     cmdParams: envParams.cmdParams,
     deeplink: envParams.deeplink,
   }

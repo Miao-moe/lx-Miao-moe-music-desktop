@@ -1,4 +1,5 @@
 <template>
+  <div id="background" :style="{ opacity: backgroundOpacity }" aria-hidden="true" />
   <div id="container" :class="[{ lock: setting['desktopLyric.isLock'] }, { hide: isHide || isHoverHide }]">
     <div id="main">
       <transition enter-active-class="animated-fast fadeIn" leave-active-class="animated-fast fadeOut">
@@ -29,7 +30,7 @@
 <script setup>
 import useWindowSize from '@lyric/useApp/useWindowSize'
 import useHoverHide from '@lyric/useApp/useHoverHide'
-import { onMounted } from '@common/utils/vueTools'
+import { computed, onMounted } from '@common/utils/vueTools'
 import { setting } from '@lyric/store/state'
 import { sendConnectMainWindowEvent } from '@lyric/utils/ipc'
 import useCommon from '@lyric/useApp/useCommon'
@@ -45,6 +46,7 @@ const isHoverHide = useHoverHide()
 useLyric()
 useTheme()
 const isHide = usePauseHide()
+const backgroundOpacity = computed(() => Math.min(100, Math.max(0, Number(setting['desktopLyric.style.backgroundOpacity']) || 0)) / 100)
 
 
 onMounted(() => {
@@ -63,7 +65,6 @@ body {
   height: 100vh;
   box-sizing: border-box;
   color: #fff;
-  opacity: .8;
 }
 
 body {
@@ -76,22 +77,27 @@ body {
 }
 
 #container {
+  position: relative;
   box-sizing: border-box;
   height: 100%;
   transition: opacity .3s ease;
-  opacity: 1;
-  &.lock {
-    #main {
-      background-color: transparent;
-    }
-  }
+  opacity: .8;
   &.hide {
-    opacity: .05;
+    opacity: .04;
 
     &:not(.lock):hover {
-      opacity: 1;
+      opacity: .8;
     }
   }
+}
+
+#background {
+  position: absolute;
+  inset: 0;
+  border-radius: @radius-border;
+  background-color: #000;
+  pointer-events: none;
+  transition: opacity @transition-theme;
 }
 
 @resize-width: 6px;
@@ -176,7 +182,6 @@ body {
   min-height: 0;
   border-radius: @radius-border;
   overflow: hidden;
-  background-color: rgba(0, 0, 0, .2);
 
   &:hover {
     .control-bar {

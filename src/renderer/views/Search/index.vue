@@ -4,7 +4,7 @@
       <base-tab :model-value="source" :list="sources" @change="handleSourceChange" />
       <base-tab :model-value="searchType" :list="searchTypes" @change="handleTypeChange" />
     </div>
-    <div :class="$style.main">
+    <common-motion-view :class="$style.main" :motion-key="`${source}:${searchType}:${page}:${searchText}`">
       <song-list-list v-if="searchType == 'songlist'" v-show="searchText" :page="page" :source-id="source" />
       <entity-list
         v-else-if="searchType == 'singer' || searchType == 'album'" v-show="searchText"
@@ -12,7 +12,7 @@
       />
       <music-list v-else v-show="searchText" :page="page" :source-id="source" />
       <blank-view :visible="!searchText" :source="source" />
-    </div>
+    </common-motion-view>
   </div>
 </template>
 

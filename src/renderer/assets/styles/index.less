@@ -323,11 +323,18 @@
   --radius-lg: 8px;
   --shadow-popup: 0 12px 28px rgba(0, 0, 0, .16), 0 2px 8px rgba(0, 0, 0, .08);
   --shadow-modal: 0 18px 48px rgba(0, 0, 0, .22), 0 2px 10px rgba(0, 0, 0, .12);
-  --duration-fast: 140ms;
-  --duration-normal: 200ms;
-  --duration-slow: 240ms;
-  --ease-standard: cubic-bezier(.2, 0, 0, 1);
-  --ease-emphasized: cubic-bezier(.2, .8, .2, 1);
+  --duration-press: 100ms;
+  --duration-fast: 180ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+  --duration-page: 240ms;
+  --duration-panel: 180ms;
+  --duration-popup: 250ms;
+  --duration-cover: 700ms;
+  --duration-detail: 600ms;
+  --duration-image: 500ms;
+  --ease-standard: cubic-bezier(.22, 1, .36, 1);
+  --ease-emphasized: cubic-bezier(.22, 1, .36, 1);
 
 
   --background-image: none;
@@ -686,6 +693,11 @@ table {
   opacity: 0;
 }
 
+.cover-swap-enter-active,
+.cover-swap-leave-active {
+  transition-duration: var(--duration-image);
+}
+
 .track-info-enter-from,
 .track-info-leave-to {
   opacity: 0;
@@ -772,12 +784,37 @@ table {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  :root:not([data-motion-enabled='true']) *,
+  :root:not([data-motion-enabled='true']) *::before,
+  :root:not([data-motion-enabled='true']) *::after {
     scroll-behavior: auto !important;
     animation-duration: .01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: .01ms !important;
+  }
+}
+
+// Icon buttons keep their hitbox; text buttons retain their existing slot layout.
+:root[data-motion-enabled='true'] {
+  button:not(:disabled):not([data-motion-button]), a[role='tab'] {
+    > svg, > .icon, > span {
+      transition: scale var(--duration-press) var(--ease-standard), color var(--duration-fast) ease;
+    }
+    &:active > svg, &:active > .icon, &:active > span {
+      scale: .95;
+    }
+  }
+  button[data-motion-button]:not(:disabled):active {
+    scale: .97;
+    transition-duration: var(--duration-press);
+  }
+}
+:root[data-motion-enabled='false'] {
+  *, *::before, *::after {
+    transition-duration: .01ms !important;
+    transition-delay: 0s !important;
+    animation-duration: .01ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
   }
 }

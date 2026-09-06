@@ -9,6 +9,7 @@ import musicSdk from '@renderer/utils/musicSdk'
 import { userApi } from '@renderer/store'
 import { toOldMusicInfo } from '@renderer/utils'
 import { reactive } from '@common/utils/vueTools'
+import { artworkCacheGeneration, onArtworkCacheCleared, readArtworkCache, writeArtworkCache } from './artworkStorage'
 
 const coverCache = new Map()
 const pending = new Map()
@@ -18,6 +19,11 @@ const MAX_CONCURRENT = 5
 
 // 全局封面显示缓存（跨组件持久化）
 const coverDisplayCache = reactive(new Map())
+onArtworkCacheCleared(() => {
+  coverCache.clear()
+  coverDisplayCache.clear()
+  pending.clear()
+})
 
 /**
  * 获取已缓存的封面 URL（同步，可能为空字符串）
@@ -44,10 +50,8 @@ export const getCachedCoverUrl = (item) => {
 export const prefetchCover = (item) => {
   if (item.img || item.meta?.picUrl) return
   const key = `${item.source}__${item.id}`
-  if (coverDisplayCache.has(key) || coverCache.has(key)) return
-  getMusicCoverUrl(item).then(url => {
-    if (url) coverDisplayCache.set(key, url)
-  })
+  if (coverDisplayCache.has(key) || coverCache.has(key) || pending.has(key)) return
+  getMusicCoverUrl(item)
 }
 
 /**
@@ -100,34 +104,47 @@ export const getMusicCoverUrl = (musicInfo) => {
   // 歌曲信息自带的封面（新格式 meta.picUrl，旧字段 img）
   const direct = info.meta?.picUrl || info.img
   if (direct) return Promise.resolve(direct)
-  const key = `${musicInfo.source}__${musicInfo.id}`
+  const key = `${info.source}__${info.id}`
   if (coverCache.has(key)) return Promise.resolve(coverCache.get(key))
   if (pending.has(key)) return pending.get(key)
 
-  const p = new Promise(resolve => {
-    queue.push(() => (async function() {
-      let url = ''
-      try {
-        // 各平台 getPic 与自定义音源接口均期望旧格式字段（songmid/albumId/hash 等位于顶层）
-        const oldInfo = toOldMusicInfo(info)
-        if (oldInfo) {
-          const sdk = musicSdk[musicInfo.source]
-          const userApiGetPic = userApi.apis?.[musicInfo.source]?.getPic
-          // 官方内置接口优先，自定义音源（userApi）仅作失败兜底，兼容所有音源
-          const candidates = [
-            sdk?.getPic ? () => sdk.getPic(oldInfo) : null,
-            userApiGetPic ? () => userApiGetPic(oldInfo) : null,
-          ]
-          url = await tryGetPic(candidates)
+  const generation = artworkCacheGeneration()
+  const p = (async() => {
+    // Disk hits do not wait behind the five network/API requests in the queue.
+    const cached = await readArtworkCache(`source:${key}`)
+    if (typeof cached === 'string' && cached) return cached
+    return new Promise(resolve => {
+      queue.push(() => (async function() {
+        let url = ''
+        try {
+          // 各平台 getPic 与自定义音源接口均期望旧格式字段（songmid/albumId/hash 等位于顶层）
+          const oldInfo = toOldMusicInfo(info)
+          if (oldInfo) {
+            const sdk = musicSdk[info.source]
+            const userApiGetPic = userApi.apis?.[info.source]?.getPic
+            // 官方内置接口优先，自定义音源（userApi）仅作失败兜底，兼容所有音源
+            const candidates = [
+              sdk?.getPic ? () => sdk.getPic(oldInfo) : null,
+              userApiGetPic ? () => userApiGetPic(oldInfo) : null,
+            ]
+            url = await tryGetPic(candidates)
+          }
+        } catch {
+          url = ''
         }
-      } catch {
-        url = ''
-      }
+        if (url) await writeArtworkCache(`source:${key}`, url, generation)
+        resolve(url)
+      })())
+      runTask()
+    })
+  })().then(url => {
+    if (generation === artworkCacheGeneration()) {
       coverCache.set(key, url)
-      pending.delete(key)
-      resolve(url)
-    })())
-    runTask()
+      if (url) coverDisplayCache.set(key, url)
+    }
+    return url
+  }).finally(() => {
+    if (pending.get(key) === p) pending.delete(key)
   })
   pending.set(key, p)
   return p

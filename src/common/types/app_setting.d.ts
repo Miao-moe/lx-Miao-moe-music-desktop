@@ -451,6 +451,11 @@ declare global {
       'desktopLyric.style.opacity': number
 
       /**
+       * 桌面歌词背景不透明度（0–100）
+       */
+      'desktopLyric.style.backgroundOpacity': number
+
+      /**
        * 桌面歌词是否允许换行
        */
       'desktopLyric.style.ellipsis': boolean
@@ -740,6 +745,9 @@ declare global {
        * 是否启用平滑动画（页面切换/列表项过渡/弹窗淡入）
        */
       'ui.smoothAnimation': boolean
+
+      /** 是否跟随系统的减少动态效果偏好 */
+      'ui.followSystemMotion': boolean
 
       /**
        * 动画速率倍数（0.5 = 慢一倍 / 1.0 = 默认 / 1.5 = 快一半）

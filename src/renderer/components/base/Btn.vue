@@ -3,6 +3,7 @@
     :class="[$style.btn, {[$style.min]: min}, {[$style.outline]: outline}]"
     tabindex="0"
     :disabled="disabled"
+    data-motion-button
   >
     <slot />
   </button>
@@ -39,7 +40,7 @@ export default {
   color: var(--color-button-font);
   outline: none;
   transition: var(--duration-fast) var(--ease-standard);
-  transition-property: color, background-color, box-shadow, transform;
+  transition-property: color, background-color, box-shadow, scale;
   background-color: var(--color-button-background);
   font-size: 14px;
   &[disabled] {
@@ -56,13 +57,11 @@ export default {
   }
   &:not([disabled]):active {
     background-color: var(--color-button-background-active);
-    transform: scale(.98);
   }
   &:focus-visible {
     box-shadow: var(--focus-ring);
   }
 }
-
 .min {
   padding: 3px 8px;
   font-size: 12px;

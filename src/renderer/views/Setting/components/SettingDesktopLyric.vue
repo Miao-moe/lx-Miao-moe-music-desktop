@@ -83,6 +83,21 @@ dd
     .p.gap-top
       base-btn.btn(min @click="resetColor") {{ $t('setting__desktop_lyric_color_reset') }}
 dd
+  h3#desktop_lyric_background_opacity {{ $t('setting__desktop_lyric_background_opacity', { num: appSetting['desktopLyric.style.backgroundOpacity'] }) }}
+  .p(:class="$style.backgroundControl")
+    base-input(
+      v-model="backgroundOpacity"
+      :class="$style.backgroundInput"
+      type="number"
+      :min="0" :max="100" :step="1"
+      aria-labelledby="desktop_lyric_background_opacity"
+      @change="changeBackgroundOpacity"
+      @submit="changeBackgroundOpacity"
+    )
+    span %
+    base-btn.btn(min @click="changeBackgroundOpacity(100)") {{ $t('setting__desktop_lyric_background_opaque') }}
+  p.p(:class="$style.backgroundTip") {{ $t('setting__desktop_lyric_background_opacity_tip') }}
+dd
   h3#desktop_lyric_font {{ $t('setting__desktop_lyric_font') }}
   div
     base-selection.gap-teft(:list="fontList" :model-value="appSetting['desktopLyric.style.font']" item-key="id" item-name="label" @update:model-value="updateSetting({ 'desktopLyric.style.font': $event })")
@@ -96,7 +111,7 @@ dd
 </template>
 
 <script>
-import { ref, computed, onMounted, onBeforeUnmount } from '@common/utils/vueTools'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from '@common/utils/vueTools'
 import { getSystemFonts } from '@renderer/utils/ipc'
 import { isLinux } from '@common/utils'
 import { appSetting, updateSetting } from '@renderer/store/setting'
@@ -263,6 +278,20 @@ export default {
       updateSetting({ 'desktopLyric.style.lineGap': Math.min(Math.max(gap, 0), 25) })
     }
 
+    const backgroundOpacity = ref(appSetting['desktopLyric.style.backgroundOpacity'])
+    watch(() => appSetting['desktopLyric.style.backgroundOpacity'], value => {
+      backgroundOpacity.value = value
+    })
+    const changeBackgroundOpacity = (value) => {
+      const opacity = value === '' ? NaN : Number(value)
+      const normalized = Number.isFinite(opacity)
+        ? Math.min(100, Math.max(0, Math.round(opacity)))
+        : appSetting['desktopLyric.style.backgroundOpacity']
+      backgroundOpacity.value = normalized
+      if (normalized === appSetting['desktopLyric.style.backgroundOpacity']) return
+      updateSetting({ 'desktopLyric.style.backgroundOpacity': normalized })
+    }
+
     const {
       lyric_unplay_color_ref,
       lyric_played_color_ref,
@@ -291,6 +320,8 @@ export default {
       appSetting,
       updateSetting,
       changeLineGap,
+      backgroundOpacity,
+      changeBackgroundOpacity,
       lyric_unplay_color_ref,
       lyric_played_color_ref,
       lyric_shadow_color_ref,
@@ -310,6 +341,20 @@ export default {
 .groupContent {
   display: flex;
   flex-flow: row wrap;
+}
+.backgroundControl {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.backgroundInput {
+  width: 80px;
+  max-width: 100%;
+}
+.backgroundTip {
+  color: var(--color-font-label);
+  font-size: 12px;
 }
 .item {
   padding-right: 40px;

@@ -98,6 +98,7 @@ const defaultSetting: LX.AppSetting = {
   'desktopLyric.style.lyricShadowColor': 'rgba(0, 0, 0, 0.18)',
   // 'desktopLyric.style.fontWeight': false,
   'desktopLyric.style.opacity': 95,
+  'desktopLyric.style.backgroundOpacity': 0,
   'desktopLyric.style.ellipsis': false,
   'desktopLyric.style.isZoomActiveLrc': false,
   'desktopLyric.style.isFontWeightFont': true,
@@ -171,6 +172,7 @@ const defaultSetting: LX.AppSetting = {
 
   // ===== UI 增强 =====
   'ui.smoothAnimation': true,
+  'ui.followSystemMotion': false,
   'ui.animationSpeed': 1.0,
 
   // ===== 播放增强 =====

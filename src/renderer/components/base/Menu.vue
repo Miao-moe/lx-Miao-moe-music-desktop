@@ -89,7 +89,7 @@ export default {
   opacity: 0;
   transform: scale(0);
   transform-origin: 0 0 0;
-  transition: var(--duration-fast) var(--ease-standard);
+  transition: var(--duration-popup) var(--ease-standard);
   transition-property: transform, opacity;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);

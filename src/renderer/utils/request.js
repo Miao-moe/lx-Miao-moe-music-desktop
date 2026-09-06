@@ -83,11 +83,14 @@ const buildHttpPromose = (url, options) => {
   }
   obj.promise = new Promise((resolve, reject) => {
     obj.cancelFn = reject
-    debugRequest && console.log(`\n---send request------${url}------------`)
+    // 使用 if，避免生产构建内联 debugRequest 后与上一行拼接成 reject(false)。
+    if (debugRequest) console.log(`\n---send request------${url}------------`)
     fetchData(url, options.method, options, (err, resp, body) => {
       // options.isShowProgress && window.api.hideProgress()
-      debugRequest && console.log(`\n---response------${url}------------`)
-      debugRequest && console.log(body)
+      if (debugRequest) {
+        console.log(`\n---response------${url}------------`)
+        console.log(body)
+      }
       obj.requestObj = null
       obj.cancelFn = null
       if (err) return reject(err)
@@ -155,13 +158,13 @@ export const http = (url, options, cb) => {
   // 默认选项
   if (options.method == null) options.method = 'get'
 
-  debugRequest && console.log(`\n---send request------${url}------------`)
+  if (debugRequest) console.log(`\n---send request------${url}------------`)
   return fetchData(url, options.method, options, (err, resp, body) => {
     // options.isShowProgress && window.api.hideProgress()
-    debugRequest && console.log(`\n---response------${url}------------`)
-    debugRequest && console.log(body)
-    if (err) {
-      debugRequest && console.log(JSON.stringify(err))
+    if (debugRequest) {
+      console.log(`\n---response------${url}------------`)
+      console.log(body)
+      if (err) console.log(JSON.stringify(err))
     }
     cb(err, resp, body)
   })
@@ -184,13 +187,13 @@ export const httpGet = (url, options, callback) => {
   //   modal: true,
   // })
 
-  debugRequest && console.log(`\n---send request-------${url}------------`)
+  if (debugRequest) console.log(`\n---send request-------${url}------------`)
   return fetchData(url, 'get', options, function(err, resp, body) {
     // options.isShowProgress && window.api.hideProgress()
-    debugRequest && console.log(`\n---response------${url}------------`)
-    debugRequest && console.log(body)
-    if (err) {
-      debugRequest && console.log(JSON.stringify(err))
+    if (debugRequest) {
+      console.log(`\n---response------${url}------------`)
+      console.log(body)
+      if (err) console.log(JSON.stringify(err))
     }
     callback(err, resp, body)
   })
@@ -215,13 +218,13 @@ export const httpPost = (url, data, options, callback) => {
   // })
   options.data = data
 
-  debugRequest && console.log(`\n---send request-------${url}------------`)
+  if (debugRequest) console.log(`\n---send request-------${url}------------`)
   return fetchData(url, 'post', options, function(err, resp, body) {
     // options.isShowProgress && window.api.hideProgress()
-    debugRequest && console.log(`\n---response------${url}------------`)
-    debugRequest && console.log(body)
-    if (err) {
-      debugRequest && console.log(JSON.stringify(err))
+    if (debugRequest) {
+      console.log(`\n---response------${url}------------`)
+      console.log(body)
+      if (err) console.log(JSON.stringify(err))
     }
     callback(err, resp, body)
   })
@@ -252,13 +255,15 @@ export const http_jsonp = (url, options, callback) => {
   //   modal: true,
   // })
 
-  debugRequest && console.log(`\n---send request-------${url}------------`)
+  if (debugRequest) console.log(`\n---send request-------${url}------------`)
   return fetchData(url, 'get', options, function(err, resp, body) {
     // options.isShowProgress && window.api.hideProgress()
-    debugRequest && console.log(`\n---response------${url}------------`)
-    debugRequest && console.log(body)
+    if (debugRequest) {
+      console.log(`\n---response------${url}------------`)
+      console.log(body)
+    }
     if (err) {
-      debugRequest && console.log(JSON.stringify(err))
+      if (debugRequest) console.log(JSON.stringify(err))
     } else {
       body = JSON.parse(body.replace(new RegExp(`^${jsonpCallback}\\(({.*})\\)$`), '$1'))
     }
