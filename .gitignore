@@ -57,6 +57,37 @@ typings/
 
 # dotenv environment variables file
 .env
+.env.*
+!.env.example
+!.env.*.example
+
+# Local AI assistant settings, skills, and worktrees
+.kilo/
+.codex/
+.claude/
+.cursor/
+.roo/
+.agents/
+.skills/
+.gemini/
+.opencode/
+.cursorrules
+.clinerules
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+SKILL.md
+
+# Local editor and operating system files
+.idea/
+*.code-workspace
+*.swp
+*.swo
+*.orig
+*.rej
+.DS_Store
+Thumbs.db
+Desktop.ini
 
 # next.js build output
 .next
