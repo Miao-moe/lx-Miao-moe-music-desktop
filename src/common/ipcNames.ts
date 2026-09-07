@@ -47,6 +47,8 @@ const modules = {
     close: 'close',
     min: 'min',
     max: 'max',
+    get_window_state: 'get_window_state',
+    window_state_changed: 'window_state_changed',
     fullscreen: 'fullscreen',
     set_app_name: 'set_app_name',
     clear_cache: 'clear_cache',

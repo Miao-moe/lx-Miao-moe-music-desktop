@@ -78,21 +78,17 @@
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from '@common/utils/vueTools'
-import { isFullscreen } from '@renderer/store'
-import { appSetting } from '@renderer/store/setting'
+import { windowFontSize } from '@renderer/store'
 import { isPlay, playQueueList, playMusicInfo } from '@renderer/store/player/state'
 import { removePlayQueue, clearPlayQueue, updatePlayIndex, setPlayMusicInfo } from '@renderer/store/player/action'
 import { getMusicCoverUrl } from '@renderer/utils/musicCover'
-import { getFontSizeWithScreen } from '@renderer/utils'
 import { playQueueById, stop } from '@renderer/core/player'
 import useEntityDetailNavigation from '@renderer/utils/compositions/useEntityDetailNavigation'
 
 const basePanelWidth = 400
 const maxVisibleRows = 9
 
-const uiFontSize = computed(() => isFullscreen.value
-  ? getFontSizeWithScreen(window.screen.width)
-  : appSetting['common.fontSize'])
+const uiFontSize = windowFontSize
 const rowHeight = computed(() => Math.ceil(uiFontSize.value * 3))
 const headerHeight = computed(() => Math.ceil(uiFontSize.value * 3))
 

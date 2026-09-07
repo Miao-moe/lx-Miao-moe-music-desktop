@@ -24,6 +24,11 @@ const hotKey = {
       action: 'toggle_hide',
       type: '',
     },
+    fullscreen_toggle: {
+      name: 'toggle_fullscreen',
+      action: 'toggle_fullscreen',
+      type: '',
+    },
     close: {
       name: 'toggle_close',
       action: 'toggle_close',

@@ -1,11 +1,21 @@
 <template>
-  <div v-show="!isFullscreen" ref="dom_btns" :class="$style.controlBtn">
-    <button type="button" :class="[$style.btn, $style.close]" :aria-label="$t('close')" ignore-tip :title="$t('close')" @click="closeWindow">
+  <div ref="dom_btns" :class="$style.controlBtn">
+    <button v-if="isFullscreen" type="button" :class="[$style.btn, $style.min]" :aria-label="$t('fullscreen_exit')" ignore-tip :title="$t('fullscreen_exit')" @click="setFullScreen(false)">
+      <svg :class="$style.controlBtniIcon" xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 24 24">
+        <use xlink:href="#icon-fullscreen-exit" />
+      </svg>
+    </button>
+    <button v-show="!isFullscreen" type="button" :class="[$style.btn, $style.close]" :aria-label="$t('close')" ignore-tip :title="$t('close')" @click="closeWindow">
       <svg :class="$style.controlBtniIcon" version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" width="100%" viewBox="0 0 24 24" space="preserve">
         <use xlink:href="#icon-window-close" />
       </svg>
     </button>
-    <button type="button" :class="[$style.btn, $style.min]" :aria-label="$t('min')" ignore-tip :title="$t('min')" @click="minWindow">
+    <button v-show="!isFullscreen" type="button" :class="[$style.btn, $style.max]" :aria-label="$t(isMaximized ? 'window_restore' : 'window_maximize')" ignore-tip :title="$t(isMaximized ? 'window_restore' : 'window_maximize')" @click="maxWindow">
+      <svg :class="$style.controlBtniIcon" xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 24 24">
+        <use :xlink:href="isMaximized ? '#icon-window-restore' : '#icon-window-maximize'" />
+      </svg>
+    </button>
+    <button v-show="!isFullscreen" type="button" :class="[$style.btn, $style.min]" :aria-label="$t('min')" ignore-tip :title="$t('min')" @click="minWindow">
       <svg :class="$style.controlBtniIcon" version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" width="100%" viewBox="0 0 24 24" space="preserve">
         <use xlink:href="#icon-window-minimize" />
       </svg>
@@ -14,10 +24,10 @@
 </template>
 
 <script setup>
-import { minWindow, closeWindow } from '@renderer/utils/ipc'
+import { minWindow, maxWindow, closeWindow, setFullScreen } from '@renderer/utils/ipc'
 import { onMounted, onBeforeUnmount, ref, useCssModule } from '@common/utils/vueTools'
 // import { getRandom } from '../../utils'
-import { isFullscreen } from '@renderer/store'
+import { isFullscreen, isMaximized } from '@renderer/store'
 
 const dom_btns = ref()
 
@@ -52,11 +62,12 @@ onBeforeUnmount(() => {
 @import '@renderer/assets/styles/layout.less';
 
 @control-btn-width: @height-toolbar * .26;
-@control-btn-height: 6%;
+@control-btn-height: @height-toolbar;
 .controlBtn {
   box-sizing: border-box;
   padding: 0 7px;
   display: flex;
+  flex: none;
   align-items: center;
   justify-content: space-evenly;
   width: 100%;
@@ -74,6 +85,7 @@ onBeforeUnmount(() => {
 }
 .btn {
   position: relative;
+  flex: none;
   width: @control-btn-width;
   height: @control-btn-width;
   background: none;
@@ -90,9 +102,9 @@ onBeforeUnmount(() => {
   &.min {
     background-color: var(--color-btn-min);
   }
-  // &.max {
-  //   background-color: var(--color-btn-max);
-  // }
+  &.max {
+    background-color: var(--color-btn-max, #e7aa36);
+  }
   &.close {
     background-color: var(--color-btn-close);
   }

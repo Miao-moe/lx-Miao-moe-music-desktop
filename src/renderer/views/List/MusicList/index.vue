@@ -31,7 +31,7 @@
       >
         <div
           class="list-item" :class="[{ [$style.active]: playerInfo.isPlayList && playerInfo.playIndex === index }, { selected: selectedIndex == index || rightClickSelectedIndex == index }, { active: selectedList.includes(item) }, { disabled: !assertApiSupport(item.source) }]"
-          @click="handleListItemClick($event, index)" @contextmenu="handleListItemRightClick($event, index)"
+          @click="handleListItemClick($event, index)" @contextmenu="handleListItemRightClick($event, index, item)"
         >
           <div class="list-item-cell no-select" :class="$style.num" style="flex: 0 0 5%;">
             <transition name="play-active">
@@ -83,7 +83,7 @@
         <div
           class="list-item"
           :class="[{ [$style.active]: playerInfo.isPlayList && playerInfo.playIndex === index }, { selected: selectedIndex == index || rightClickSelectedIndex == index }, { active: selectedList.includes(item) }, { disabled: !assertApiSupport(item.source) }]"
-          @click="handleListItemClick($event, index)" @contextmenu="handleListItemRightClick($event, index)"
+          @click="handleListItemClick($event, index)" @contextmenu="handleListItemRightClick($event, index, item)"
         >
           <div class="list-item-cell no-select" :class="$style.num" style="flex: 0 0 5%;">
             <transition name="play-active">
@@ -315,17 +315,24 @@ export default {
       handleSelectData(index)
       doubleClickPlay(index)
     }
-    const handleListItemRightClick = (event, index) => {
+    let rightClickTarget = null
+    const handleListItemRightClick = (event, index, musicInfo) => {
+      rightClickTarget = { listId: props.listId, musicId: musicInfo.id }
       rightClickSelectedIndex.value = index
-      showMenu(event, list.value[index], index)
+      showMenu(event, musicInfo, index)
     }
     const handleMenuClick = (action) => {
-      let index = rightClickSelectedIndex.value
+      // The playlist may change while the menu is open. Resolve the clicked song by ID.
+      const index = rightClickTarget?.listId === props.listId
+        ? list.value.findIndex(item => item.id === rightClickTarget.musicId)
+        : -1
+      rightClickTarget = null
       rightClickSelectedIndex.value = -1
-      menuClick(action, index)
+      menuClick(index < 0 ? null : action, index)
     }
     const handleListRightClick = (event) => {
       if (!event.target.classList.contains('select')) return
+      if (!window.getSelection()?.toString().trim()) return
       event.stopImmediatePropagation()
       let classList = dom_listContent.value.classList
       classList.add('copying')

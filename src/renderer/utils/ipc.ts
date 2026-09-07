@@ -4,6 +4,7 @@ import { markRaw } from '@common/utils/vueTools'
 import * as hotKeys from '@common/hotKey'
 import { APP_EVENT_NAMES, DATA_KEYS, DEFAULT_SETTING } from '@common/constants'
 import { clearArtworkCache, getArtworkCacheSize } from './artworkStorage'
+import type { WindowState } from '@common/config'
 
 type RemoveListener = () => void
 
@@ -373,6 +374,11 @@ export const allHotKeys = markRaw({
       type: APP_EVENT_NAMES.winMainName,
     },
     {
+      name: hotKeys.HOTKEY_COMMON.fullscreen_toggle.name,
+      action: hotKeys.HOTKEY_COMMON.fullscreen_toggle.action,
+      type: APP_EVENT_NAMES.winMainName,
+    },
+    {
       name: hotKeys.HOTKEY_COMMON.close.name,
       action: hotKeys.HOTKEY_COMMON.close.action,
       type: APP_EVENT_NAMES.winMainName,
@@ -387,6 +393,11 @@ export const allHotKeys = markRaw({
     {
       name: hotKeys.HOTKEY_COMMON.hide_toggle.name,
       action: hotKeys.HOTKEY_COMMON.hide_toggle.action,
+      type: APP_EVENT_NAMES.winMainName,
+    },
+    {
+      name: hotKeys.HOTKEY_COMMON.fullscreen_toggle.name,
+      action: hotKeys.HOTKEY_COMMON.fullscreen_toggle.action,
       type: APP_EVENT_NAMES.winMainName,
     },
     {
@@ -705,6 +716,17 @@ export const minWindow = () => {
  */
 export const maxWindow = () => {
   rendererSend(WIN_MAIN_RENDERER_EVENT_NAME.max)
+}
+
+export const getWindowState = async(): Promise<WindowState> => {
+  return rendererInvoke<WindowState>(WIN_MAIN_RENDERER_EVENT_NAME.get_window_state)
+}
+
+export const onWindowStateChanged = (listener: LX.IpcRendererEventListenerParams<WindowState>): RemoveListener => {
+  rendererOn(WIN_MAIN_RENDERER_EVENT_NAME.window_state_changed, listener)
+  return () => {
+    rendererOff(WIN_MAIN_RENDERER_EVENT_NAME.window_state_changed, listener)
+  }
 }
 
 /**

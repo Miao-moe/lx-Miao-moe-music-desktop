@@ -196,6 +196,16 @@ export const initHotKey = async() => {
     electronStore_hotKey.set('version', 1)
   }
 
+  if (hotKeyVersion < 2) {
+    const fullscreenHotKey = defaultHotKey.local.keys.f11
+    const configs = [resolvedLocalConfig, globalConfig!]
+    if (!configs.some(config => config.keys.f11 || Object.values(config.keys).some(info => info.action == fullscreenHotKey.action))) {
+      resolvedLocalConfig.keys.f11 = { ...fullscreenHotKey }
+      electronStore_hotKey.set('local', resolvedLocalConfig)
+    }
+    electronStore_hotKey.set('version', 2)
+  }
+
   return {
     local: resolvedLocalConfig,
     global: globalConfig!,

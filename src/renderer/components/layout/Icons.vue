@@ -152,6 +152,13 @@
       <g id="icon-window-minimize-2" fill="currentColor">
         <path d="M19,13H5V11H19V13Z" />
       </g>
+      <g id="icon-window-maximize" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="5" y="5" width="14" height="14" />
+      </g>
+      <g id="icon-window-restore" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M8 8V4H20V16H16" />
+        <rect x="4" y="8" width="12" height="12" />
+      </g>
       <g id="icon-window-close" fill="currentColor">
         <path d="M20 6.91L17.09 4L12 9.09L6.91 4L4 6.91L9.09 12L4 17.09L6.91 20L12 14.91L17.09 20L20 17.09L14.91 12L20 6.91Z" />
       </g>
@@ -223,4 +230,3 @@
     </defs>
   </svg>
 </template>
-

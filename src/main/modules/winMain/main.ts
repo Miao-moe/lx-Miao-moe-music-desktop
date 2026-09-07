@@ -1,5 +1,7 @@
-import { BrowserWindow, dialog, session } from 'electron'
+import { BrowserWindow, dialog, screen, session } from 'electron'
 import path from 'node:path'
+import { type WindowState, windowSizeList } from '@common/config'
+import { WIN_MAIN_RENDERER_EVENT_NAME } from '@common/ipcNames'
 import { createTaskBarButtons, getWindowSizeInfo } from './utils'
 import { getPlatform, isLinux, isWin, log } from '@common/utils'
 import { getProxy, openDevTools as handleOpenDevTools } from '@main/utils'
@@ -8,10 +10,42 @@ import { sendFocus, sendTaskbarButtonClick } from './rendererEvent'
 import { encodePath } from '@common/utils/electron'
 
 let browserWindow: Electron.BrowserWindow | null = null
+let maximizedRestoreBounds: Electron.Rectangle | null = null
+let windowFullscreen = false
 let rendererRecoveryAttempts = 0
 let rendererRecoveryResetTimer: ReturnType<typeof setTimeout> | null = null
 
 const RENDERER_RECOVERY_RESET_DELAY = 30_000
+
+export const getWindowState = (): WindowState => ({
+  isMaximized: !!maximizedRestoreBounds || !!browserWindow?.isMaximized(),
+  isFullscreen: windowFullscreen,
+})
+
+const sendWindowState = () => {
+  if (!browserWindow || browserWindow.webContents.isDestroyed()) return
+  sendEvent(WIN_MAIN_RENDERER_EVENT_NAME.window_state_changed, getWindowState())
+}
+
+const fitWindowBounds = (bounds: Electron.Rectangle): Electron.Rectangle => {
+  const area = screen.getDisplayMatching(bounds).workArea
+  const width = Math.min(bounds.width, area.width)
+  const height = Math.min(bounds.height, area.height)
+  return {
+    width,
+    height,
+    x: Math.max(area.x, Math.min(bounds.x, area.x + area.width - width)),
+    y: Math.max(area.y, Math.min(bounds.y, area.y + area.height - height)),
+  }
+}
+
+const updateMaximizedBounds = () => {
+  if (!browserWindow || !maximizedRestoreBounds || windowFullscreen) return
+  const area = screen.getDisplayMatching(browserWindow.getBounds()).workArea
+  browserWindow.setMinimumSize(Math.min(windowSizeList[0].width, area.width), Math.min(windowSizeList[0].height, area.height))
+  browserWindow.setBounds(area)
+  sendWindowState()
+}
 
 const winEvent = () => {
   if (!browserWindow) return
@@ -31,7 +65,29 @@ const winEvent = () => {
   browserWindow.on('closed', () => {
     // global.lx.mainWindowClosed = true
     browserWindow = null
+    maximizedRestoreBounds = null
+    windowFullscreen = false
+    screen.removeListener('display-metrics-changed', updateMaximizedBounds)
+    screen.removeListener('display-removed', updateMaximizedBounds)
   })
+
+  browserWindow.on('maximize', sendWindowState)
+  browserWindow.on('unmaximize', sendWindowState)
+  browserWindow.on('enter-full-screen', () => {
+    // Transparent Windows windows emit this event but can report isFullScreen() as false.
+    windowFullscreen = true
+    global.lx.event_app.main_window_fullscreen(true)
+    sendWindowState()
+  })
+  browserWindow.on('leave-full-screen', () => {
+    windowFullscreen = false
+    if (isLinux && !global.envParams.cmdParams.dt) browserWindow?.setResizable(false)
+    updateMaximizedBounds()
+    global.lx.event_app.main_window_fullscreen(false)
+    sendWindowState()
+  })
+  screen.on('display-metrics-changed', updateMaximizedBounds)
+  screen.on('display-removed', updateMaximizedBounds)
 
   // browserWindow.on('restore', () => {
   //   browserWindow.webContents.send('restore')
@@ -55,6 +111,7 @@ const winEvent = () => {
 
   const webContents = browserWindow.webContents
   webContents.on('did-finish-load', () => {
+    sendWindowState()
     if (rendererRecoveryResetTimer) clearTimeout(rendererRecoveryResetTimer)
     rendererRecoveryResetTimer = setTimeout(() => {
       rendererRecoveryAttempts = 0
@@ -94,7 +151,12 @@ const winEvent = () => {
 
 export const createWindow = () => {
   closeWindow()
+  maximizedRestoreBounds = null
+  windowFullscreen = global.lx.appSetting['common.startInFullscreen']
   const windowSizeInfo = getWindowSizeInfo(global.lx.appSetting['common.windowSizeId'])
+  const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea
+  const width = Math.min(windowSizeInfo.width, area.width)
+  const height = Math.min(windowSizeInfo.height, area.height)
 
   const { shouldUseDarkColors, theme } = global.lx.theme
   const ses = session.fromPartition('persist:win-main')
@@ -105,16 +167,20 @@ export const createWindow = () => {
    * Initial window options
    */
   const options: Electron.BrowserWindowConstructorOptions = {
-    height: windowSizeInfo.height,
+    height,
     useContentSize: true,
-    width: windowSizeInfo.width,
+    width,
+    x: area.x + Math.floor((area.width - width) / 2),
+    y: area.y + Math.floor((area.height - height) / 2),
+    minWidth: Math.min(windowSizeList[0].width, area.width),
+    minHeight: Math.min(windowSizeList[0].height, area.height),
     frame: false,
     transparent: !global.envParams.cmdParams.dt,
     hasShadow: global.envParams.cmdParams.dt,
     // enableRemoteModule: false,
     // icon: join(global.__static, isWin ? 'icons/256x256.ico' : 'icons/512x512.png'),
-    resizable: false,
-    maximizable: false,
+    resizable: !!global.envParams.cmdParams.dt,
+    maximizable: true,
     fullscreenable: true,
     roundedCorners: global.envParams.cmdParams.dt,
     show: false,
@@ -205,12 +271,30 @@ export const minimize = () => {
   browserWindow.minimize()
 }
 export const maximize = () => {
-  if (!browserWindow) return
+  if (!browserWindow || getWindowState().isMaximized || windowFullscreen) return
+  // Transparent Windows windows do not reliably report native maximization.
+  if (isWin && !global.envParams.cmdParams.dt) {
+    maximizedRestoreBounds = browserWindow.getBounds()
+    updateMaximizedBounds()
+    return
+  }
   browserWindow.maximize()
 }
 export const unmaximize = () => {
   if (!browserWindow) return
+  if (maximizedRestoreBounds) {
+    const bounds = fitWindowBounds(maximizedRestoreBounds)
+    maximizedRestoreBounds = null
+    browserWindow.setBounds(bounds)
+    sendWindowState()
+    return
+  }
   browserWindow.unmaximize()
+}
+export const toggleMaximize = () => {
+  if (windowFullscreen) return
+  if (getWindowState().isMaximized) unmaximize()
+  else maximize()
 }
 export const toggleHide = () => {
   if (!browserWindow) return
@@ -237,8 +321,10 @@ export const hideWindow = () => {
   browserWindow.hide()
 }
 export const setWindowBounds = (options: Partial<Electron.Rectangle>) => {
-  if (!browserWindow) return
-  browserWindow.setBounds(options)
+  if (!browserWindow || windowFullscreen) return
+  if (getWindowState().isMaximized) unmaximize()
+  browserWindow.setBounds(fitWindowBounds({ ...browserWindow.getBounds(), ...options }))
+  sendWindowState()
 }
 export const setProgressBar = (progress: number, options?: Electron.ProgressBarOptions) => {
   if (!browserWindow) return
@@ -259,17 +345,8 @@ export const toggleDevTools = () => {
 
 export const setFullScreen = (isFullscreen: boolean): boolean => {
   if (!browserWindow) return false
-  if (isLinux) { // linux 需要先设置为可调整窗口大小才能全屏
-    if (isFullscreen) {
-      browserWindow.setResizable(isFullscreen)
-      browserWindow.setFullScreen(isFullscreen)
-    } else {
-      browserWindow.setFullScreen(isFullscreen)
-      browserWindow.setResizable(isFullscreen)
-    }
-  } else {
-    browserWindow.setFullScreen(isFullscreen)
-  }
+  if (isLinux && isFullscreen) browserWindow.setResizable(true)
+  browserWindow.setFullScreen(isFullscreen)
   return isFullscreen
 }
 

@@ -234,6 +234,16 @@ export default {
     }
   }
 }
+:global(.maximized), :global(.fullscreen) {
+  .main {
+    align-self: center;
+    width: calc(100% - 60px);
+    max-width: 1600px;
+  }
+  .left {
+    justify-content: center;
+  }
+}
 .left {
   flex: 0 0 40%;
   display: flex;

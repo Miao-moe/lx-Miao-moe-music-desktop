@@ -23,6 +23,11 @@ const local: LX.HotKeyConfig = {
       name: HOTKEY_COMMON.focusSearchInput.name,
       action: HOTKEY_COMMON.focusSearchInput.action,
     },
+    f11: {
+      type: HOTKEY_COMMON.fullscreen_toggle.type,
+      name: HOTKEY_COMMON.fullscreen_toggle.name,
+      action: HOTKEY_COMMON.fullscreen_toggle.action,
+    },
     'mod+f': {
       type: HOTKEY_COMMON.focusListSearchInput.type,
       name: HOTKEY_COMMON.focusListSearchInput.name,

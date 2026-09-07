@@ -1,4 +1,3 @@
-import { getFontSizeWithScreen } from '@renderer/utils'
 import {
   minWindow,
   onFocus,
@@ -56,12 +55,8 @@ const handleBodyClick = (event: MouseEvent) => {
 const handle_open_devtools = () => {
   openDevTools()
 }
-const handle_fullscreen = (event: LX.KeyDownEevent) => {
-  let fullscreen = !isFullscreen.value
-  if (typeof event == 'boolean') {
-    fullscreen = event
-  } else if (event.event?.repeat) return
-  void setFullScreen(fullscreen).then(fullscreen => {
+const handle_fullscreen = () => {
+  void setFullScreen(!isFullscreen.value).then(fullscreen => {
     isFullscreen.value = fullscreen
   })
 }
@@ -70,20 +65,6 @@ const handle_selection = (event: LX.KeyDownEevent) => {
 }
 
 export default () => {
-  watch(isFullscreen, val => {
-    if (val) {
-      document.documentElement.classList.remove(window.dt ? 'disableTransparent' : 'transparent')
-      document.documentElement.classList.add('fullscreen')
-      document.documentElement.style.fontSize = `${getFontSizeWithScreen(window.screen.width)}px`
-    } else {
-      document.documentElement.classList.remove('fullscreen')
-      document.documentElement.classList.add(window.dt ? 'disableTransparent' : 'transparent')
-      document.documentElement.style.fontSize = `${appSetting['common.fontSize']}px`
-    }
-  }, {
-    immediate: true,
-  })
-
   watch(isShowAnimation, val => {
     if (val) {
       if (document.documentElement.classList.contains('disableAnimation')) {
@@ -125,10 +106,10 @@ export default () => {
   window.key_event.on(HOTKEY_COMMON.min.action, minWindow)
   window.key_event.on(HOTKEY_COMMON.hide_toggle.action, showHideWindowToggle)
   window.key_event.on(HOTKEY_COMMON.close.action, quitApp)
+  window.key_event.on(HOTKEY_COMMON.fullscreen_toggle.action, handle_fullscreen)
 
   window.app_event.on('keyDown', handle_key_down)
   window.key_event.on('key_mod+f12_down', handle_open_devtools)
-  window.key_event.on('key_f11_down', handle_fullscreen)
   window.key_event.on('key_mod+a_down', handle_selection)
   document.body.addEventListener('click', handleBodyClick, true)
 
@@ -136,10 +117,10 @@ export default () => {
     window.key_event.off(HOTKEY_COMMON.min.action, minWindow)
     window.key_event.off(HOTKEY_COMMON.hide_toggle.action, showHideWindowToggle)
     window.key_event.off(HOTKEY_COMMON.close.action, quitApp)
+    window.key_event.off(HOTKEY_COMMON.fullscreen_toggle.action, handle_fullscreen)
 
     window.app_event.off('keyDown', handle_key_down)
     window.key_event.off('key_mod+f12_down', handle_open_devtools)
-    window.key_event.off('key_f11_down', handle_fullscreen)
     window.key_event.off('key_mod+a_down', handle_selection)
     document.body.removeEventListener('click', handleBodyClick)
     rSetConfig()

@@ -5,6 +5,11 @@ export interface WindowSize {
   height: number
 }
 
+export interface WindowState {
+  isMaximized: boolean
+  isFullscreen: boolean
+}
+
 export const windowSizeList: WindowSize[] = [
   {
     id: 0,
@@ -83,4 +88,3 @@ export const navigationUrlWhiteList: RegExp[] = []
 //   'rgb(222,222,222)',
 //   'rgb(229,229,229)',
 // ] as const
-

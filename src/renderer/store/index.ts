@@ -1,4 +1,4 @@
-import { ref, reactive, shallowRef, markRaw, computed, watch } from '@common/utils/vueTools'
+import { ref, reactive, shallowRef, markRaw, computed } from '@common/utils/vueTools'
 import { windowSizeList as configWindowSizeList } from '@common/config'
 import { appSetting } from './setting'
 import music from '@renderer/utils/musicSdk'
@@ -150,9 +150,8 @@ export const isShowChangeLog = ref(false)
 
 
 export const isFullscreen = ref(false)
-watch(isFullscreen, isFullscreen => {
-  window.lx.rootOffset = window.dt || isFullscreen ? 0 : 8
-}, { immediate: true })
+export const isMaximized = ref(false)
+export const windowFontSize = ref(appSetting['common.fontSize'])
 
 export const themeShouldUseDarkColors = ref(window.shouldUseDarkColors)
 

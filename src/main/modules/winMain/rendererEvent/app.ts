@@ -2,10 +2,12 @@
 import { app } from 'electron'
 import { mainHandle, mainOn } from '@common/mainIpc'
 import { WIN_MAIN_RENDERER_EVENT_NAME } from '@common/ipcNames'
+import type { WindowState } from '@common/config'
 // import { name as defaultName } from '../../../../../package.json'
 import {
   minimize,
-  maximize,
+  toggleMaximize,
+  getWindowState,
   closeWindow,
   showWindow,
   setFullScreen,
@@ -48,8 +50,9 @@ export default () => {
     minimize()
   })
   mainOn(WIN_MAIN_RENDERER_EVENT_NAME.max, () => {
-    maximize()
+    toggleMaximize()
   })
+  mainHandle<WindowState>(WIN_MAIN_RENDERER_EVENT_NAME.get_window_state, async() => getWindowState())
   mainOn(WIN_MAIN_RENDERER_EVENT_NAME.focus, () => {
     showWindow()
   })
@@ -65,7 +68,6 @@ export default () => {
   })
   // 全屏
   mainHandle<boolean, boolean>(WIN_MAIN_RENDERER_EVENT_NAME.fullscreen, async({ params: isFullscreen }) => {
-    global.lx.event_app.main_window_fullscreen(isFullscreen)
     return setFullScreen(isFullscreen)
   })
 

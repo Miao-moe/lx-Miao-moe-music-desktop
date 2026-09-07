@@ -28,6 +28,7 @@ export const registerKeyEvent = () => {
       // console.log(key, eventKey, type, keys, isEditing)
       event.preventDefault()
       if (type == 'up') return
+      if (event.repeat && window.lx.appHotKeyConfig.local.keys[key].action == HOTKEY_COMMON.fullscreen_toggle.action) return
 
       // 软件内快捷键的最小化触发时
       // 如果已启用托盘，则隐藏程序，否则最小化程序 https://github.com/lyswhut/lx-music-desktop/issues/603

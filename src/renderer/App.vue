@@ -115,7 +115,7 @@ body {
   //   margin-right: 5Px;
   // }
 }
-.fullscreen {
+.fullscreen, .maximized {
   background-color: var(--color-content-background);
 
   #right {
@@ -133,7 +133,13 @@ body {
 
 #left {
   flex: none;
-  width: @width-app-left;
+  width: clamp(76px, @width-app-left, min(112px, 14vh));
+}
+.maximized #left, .fullscreen #left {
+  width: clamp(68px, 5.8%, min(100px, 12.5vh));
+}
+.maximized #left, .maximized #toolbar {
+  -webkit-app-region: no-drag;
 }
 #right {
   flex: auto;

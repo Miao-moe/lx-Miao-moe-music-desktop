@@ -1,11 +1,21 @@
 <template>
-  <div v-show="!isFullscreen" ref="dom_btns" :class="$style.control">
-    <button type="button" :class="[$style.btn, $style.min]" :aria-label="$t('min')" ignore-tip :title="$t('min')" @click="minWindow">
+  <div ref="dom_btns" :class="$style.control">
+    <button v-if="isFullscreen" type="button" :class="[$style.btn, $style.max]" :aria-label="$t('fullscreen_exit')" ignore-tip :title="$t('fullscreen_exit')" @click="setFullScreen(false)">
+      <svg xmlns="http://www.w3.org/2000/svg" height="60%" viewBox="0 0 24 24">
+        <use xlink:href="#icon-fullscreen-exit" />
+      </svg>
+    </button>
+    <button v-show="!isFullscreen" type="button" :class="[$style.btn, $style.min]" :aria-label="$t('min')" ignore-tip :title="$t('min')" @click="minWindow">
       <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" height="60%" viewBox="0 0 24 24" space="preserve">
         <use xlink:href="#icon-window-minimize-2" />
       </svg>
     </button>
-    <button type="button" :class="[$style.btn, $style.close]" :aria-label="$t('close')" ignore-tip :title="$t('close')" @click="closeWindow">
+    <button v-show="!isFullscreen" type="button" :class="[$style.btn, $style.max]" :aria-label="$t(isMaximized ? 'window_restore' : 'window_maximize')" ignore-tip :title="$t(isMaximized ? 'window_restore' : 'window_maximize')" @click="maxWindow">
+      <svg xmlns="http://www.w3.org/2000/svg" height="60%" viewBox="0 0 24 24">
+        <use :xlink:href="isMaximized ? '#icon-window-restore' : '#icon-window-maximize'" />
+      </svg>
+    </button>
+    <button v-show="!isFullscreen" type="button" :class="[$style.btn, $style.close]" :aria-label="$t('close')" ignore-tip :title="$t('close')" @click="closeWindow">
       <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" height="60%" viewBox="0 0 24 24" space="preserve">
         <use xlink:href="#icon-window-close-2" />
       </svg>
@@ -14,10 +24,10 @@
 </template>
 
 <script setup>
-import { minWindow, closeWindow } from '@renderer/utils/ipc'
+import { minWindow, maxWindow, closeWindow, setFullScreen } from '@renderer/utils/ipc'
 import { onMounted, onBeforeUnmount, ref, useCssModule } from '@common/utils/vueTools'
 // import { getRandom } from '../../utils'
-import { isFullscreen } from '@renderer/store'
+import { isFullscreen, isMaximized } from '@renderer/store'
 
 const dom_btns = ref()
 
@@ -30,7 +40,7 @@ const handle_focus = () => {
     node.classList.remove(cssModule.hover)
   }
 }
-const getBtnEl = (el) => el.tagName == 'BUTTON' || !el ? el : getBtnEl(el.parentNode)
+const getBtnEl = (el) => !el || el.tagName == 'BUTTON' ? el : getBtnEl(el.parentNode)
 const handle_mouseover = (event) => {
   const btn = getBtnEl(event.target)
   if (!btn) return
@@ -62,6 +72,7 @@ onBeforeUnmount(() => {
 
 .control {
   display: flex;
+  flex: none;
   align-self: flex-start;
   -webkit-app-region: no-drag;
   height: 30px;

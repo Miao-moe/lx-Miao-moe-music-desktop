@@ -272,6 +272,7 @@ export default {
     }
     const handleListRightClick = (event) => {
       if (!event.target.classList.contains('select')) return
+      if (!window.getSelection()?.toString().trim()) return
       event.stopImmediatePropagation()
       let classList = dom_listContent.value.classList
       classList.add('copying')

@@ -11,7 +11,9 @@ div(:class="$style.header")
       svg(:class="$style.controBtnIcon" version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" width="100%" viewBox="0 0 24 24" space="preserve")
         use(xlink:href="#icon-window-minimize")
 
-    //- button(type="button" :class="$style.max" @click="max")
+    button(type="button" :class="$style.max" :aria-label="$t(isMaximized ? 'window_restore' : 'window_maximize')" ignore-tip :title="$t(isMaximized ? 'window_restore' : 'window_maximize')" @click="maxWindow")
+      svg(:class="$style.controBtnIcon" xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 24 24")
+        use(:xlink:href="isMaximized ? '#icon-window-restore' : '#icon-window-maximize'")
     button(type="button" :class="$style.close" :aria-label="$t('close')" ignore-tip :title="$t('close')" @click="closeWindow")
       svg(:class="$style.controBtnIcon" version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" width="100%" viewBox="0 0 24 24" space="preserve")
         use(xlink:href="#icon-window-close")
@@ -20,9 +22,9 @@ div(:class="$style.header")
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, useCssModule } from '@common/utils/vueTools'
-import { isFullscreen } from '@renderer/store'
+import { isFullscreen, isMaximized } from '@renderer/store'
 import { setShowPlayerDetail } from '@renderer/store/player/action'
-import { closeWindow, minWindow, setFullScreen } from '@renderer/utils/ipc'
+import { closeWindow, minWindow, maxWindow, setFullScreen } from '@renderer/utils/ipc'
 
 const dom_btns = ref()
 
@@ -77,7 +79,7 @@ const fullscreenExit = () => {
     -webkit-app-region: no-drag;
     align-self: flex-start;
     .controBtn {
-      .close, .min {
+      .close, .min, .max {
         display: none;
       }
       .fullscreenExit {
@@ -85,6 +87,9 @@ const fullscreenExit = () => {
       }
     }
   }
+}
+:global(.maximized) .header {
+  -webkit-app-region: no-drag;
 }
 .header {
   position: relative;
@@ -145,9 +150,9 @@ const fullscreenExit = () => {
       &.min, &.fullscreenExit {
         background-color: var(--color-btn-min);
       }
-      // &.max {
-      //   background-color: var(--color-btn-max);
-      // }
+      &.max {
+        background-color: var(--color-btn-max, #e7aa36);
+      }
       &.close {
         background-color: var(--color-btn-close);
       }

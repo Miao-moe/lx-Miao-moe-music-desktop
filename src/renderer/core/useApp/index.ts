@@ -10,6 +10,7 @@ import useUpdate from './useUpdate'
 import useDataInit from './useDataInit'
 import useHandleEnvParams from './useHandleEnvParams'
 import useEventListener from './useEventListener'
+import useWindowState from './useWindowState'
 import useDeeplink from './useDeeplink'
 import usePlayer from './usePlayer'
 import useSettingSync from './useSettingSync'
@@ -29,6 +30,7 @@ export default () => {
   const initSyncService = useSync()
   const initOpenAPI = useOpenAPI()
   const initStatusbarLyric = useStatusbarLyric()
+  useWindowState()
   useEventListener()
   const initPlayer = usePlayer()
   const handleEnvParams = useHandleEnvParams()

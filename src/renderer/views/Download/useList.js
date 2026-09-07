@@ -1,6 +1,5 @@
 import { computed, watch, ref, onBeforeUnmount } from '@common/utils/vueTools'
-import { isFullscreen } from '@renderer/store'
-import { getFontSizeWithScreen } from '@renderer/utils'
+import { windowFontSize } from '@renderer/store'
 import { appSetting } from '@renderer/store/setting'
 
 const useKeyEvent = ({ listRef, handleSelectAllData }) => {
@@ -50,7 +49,7 @@ export default ({ listRef, list, listAll }) => {
 
   let lastSelectIndex = -1
   const listItemHeight = computed(() => {
-    const fontHeight = Math.ceil((isFullscreen.value ? getFontSizeWithScreen() : appSetting['common.fontSize']) * 2.3)
+    const fontHeight = Math.ceil(windowFontSize.value * 2.3)
     return Math.max(fontHeight, appSetting['list.coverSize'] + 8)
   })
 
