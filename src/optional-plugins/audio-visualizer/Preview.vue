@@ -6,8 +6,9 @@
 import { ref, watch, onMounted, onBeforeUnmount } from '@common/utils/vueTools'
 import { isPlay } from '@renderer/store/player/state'
 import { acquirePreview, getFrequencyData } from './analyser'
-import { drawSpectrum } from './spectrum'
+import { createVisualizerRenderer } from './renderer'
 import { demoSpectrum } from './styles'
+import { demoRadialData } from './radialData'
 
 const props = defineProps({ kind: { type: String, required: true }, live: Boolean })
 const canvas = ref(null)
@@ -15,21 +16,27 @@ let frame = null
 let mounted = false
 let observer
 let release
+let renderer
 const stop = () => { if (frame != null) cancelAnimationFrame(frame); frame = null }
 const draw = (time = 1400) => {
   frame = null
   if (!mounted) return
-  const data = props.live && isPlay.value ? getFrequencyData() : demoSpectrum(time)
-  drawSpectrum(canvas.value, data, { style: props.kind, preview: true, time })
+  const data = props.live && isPlay.value ? getFrequencyData(props.kind) : props.kind === 'radial' ? demoRadialData(time) : demoSpectrum(time)
+  renderer.draw(data, { style: props.kind, preview: true, time })
   if (props.live && !document.hidden) frame = requestAnimationFrame(draw)
 }
 const refresh = () => { stop(); draw() }
-watch(() => props.kind, refresh)
+watch(() => props.kind, () => {
+  release?.()
+  if (mounted && props.live) release = acquirePreview(props.kind)
+  refresh()
+})
 watch(isPlay, refresh)
 onMounted(() => {
   mounted = true
-  if (props.live) release = acquirePreview()
-  observer = new ResizeObserver(refresh)
+  renderer = createVisualizerRenderer(canvas.value)
+  if (props.live) release = acquirePreview(props.kind)
+  observer = new ResizeObserver(() => { stop(); frame = requestAnimationFrame(draw) })
   observer.observe(canvas.value)
   document.addEventListener('visibilitychange', refresh)
   draw()
@@ -39,6 +46,7 @@ onBeforeUnmount(() => {
   stop()
   observer?.disconnect()
   release?.()
+  renderer?.dispose()
   document.removeEventListener('visibilitychange', refresh)
 })
 </script>

@@ -74,10 +74,13 @@ async function main() {
       externals,
       module: {
         ...base.module,
-        rules: base.module.rules.map(rule => rule.test?.test('entry.ts') ? {
+        rules: [...base.module.rules.map(rule => rule.test?.test('entry.ts') ? {
           ...rule,
           use: { loader: 'ts-loader', options: { appendTsSuffixTo: [/\.vue$/], configFile: path.join(root, 'src/optional-plugins/tsconfig.json'), transpileOnly: true } },
-        } : rule),
+        } : rule), {
+          test: /audiomotion-analyzer[\\/]src[\\/]audioMotion-analyzer\.js$/,
+          use: path.join(__dirname, 'audiomotion-loader.js'),
+        }],
       },
       optimization: { minimize: true, splitChunks: false, runtimeChunk: false },
       plugins: [
@@ -93,6 +96,12 @@ async function main() {
       const workletPath = path.join(output, 'pitch-shifter/phase-vocoder.js')
       const worklet = (await fs.readFile(workletPath, 'utf8')).replace("from './fft'", "from './fft.js'").replace("from './ola-processor'", "from './ola-processor.js'").replaceAll('phase-vocoder-processor', `lx-sound-effects-${manifest.version}`)
       await fs.writeFile(workletPath, worklet)
+    }
+    if (id === 'audio-visualizer') {
+      const licenses = path.join(output, 'licenses')
+      await fs.mkdir(licenses, { recursive: true })
+      await fs.copyFile(path.join(root, 'node_modules/audiomotion-analyzer/LICENSE'), path.join(licenses, 'audioMotion-AGPL-3.0.txt'))
+      await fs.copyFile(path.join(source, 'NOTICE.md'), path.join(output, 'NOTICE.md'))
     }
     const files = await readFiles(output)
     manifest.files = files.map(file => ({ path: file.path, bytes: file.data.length, sha256: sha256(file.data) }))

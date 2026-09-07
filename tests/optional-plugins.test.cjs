@@ -59,7 +59,11 @@ test('the distributable official plugins pass all package checks', async() => {
     assert.equal(result.manifest.id, entry.id)
     assert.ok(result.files.some(file => file.path === 'renderer.js'))
     if (entry.id === 'sound-effects') assert.ok(result.files.some(file => file.path.startsWith('filters/')))
-    else assert.ok(result.files.some(file => file.path === 'lyric.js'))
+    else {
+      assert.ok(result.files.some(file => file.path === 'lyric.js'))
+      assert.ok(result.files.some(file => file.path === 'NOTICE.md'))
+      assert.ok(result.files.some(file => file.path === 'licenses/audioMotion-AGPL-3.0.txt'))
+    }
   }
 })
 

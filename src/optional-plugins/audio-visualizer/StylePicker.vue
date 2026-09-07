@@ -77,7 +77,7 @@ const select = async(kind) => {
 .tabs button { cursor: pointer; border: none; border-radius: var(--radius-sm); padding: 7px 12px; color: var(--color-font); background: transparent; }
 .tabs button[aria-selected="true"] { color: var(--color-primary); background: var(--color-surface-elevated); box-shadow: 0 1px 4px #0001; }
 .tabs button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
-.preview { position: relative; height: 128px; overflow: hidden; border-radius: var(--radius-md); border: 1px solid var(--color-primary-alpha-800); background: linear-gradient(135deg, var(--color-primary-alpha-900), transparent); }
+.preview { position: relative; height: 156px; overflow: hidden; border-radius: var(--radius-md); border: 1px solid var(--color-primary-alpha-800); background: linear-gradient(135deg, var(--color-primary-alpha-900), transparent); }
 .previewLabel { position: absolute; top: 12px; left: 14px; display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
 .previewLabel strong { font-size: 13px; color: var(--color-font); }
 .previewLabel span { font-size: 11px; color: var(--color-font-label); }
@@ -87,12 +87,12 @@ const select = async(kind) => {
 .card:focus-within { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 .selected { border-color: var(--color-primary); background: var(--color-primary-alpha-900); }
 .card input { position: absolute; width: 1px; height: 1px; opacity: 0; }
-.thumbnail { height: 44px; overflow: hidden; }
+.thumbnail { height: 64px; overflow: hidden; }
 .name { display: flex; align-items: center; justify-content: space-between; gap: 4px; font-size: 13px; color: var(--color-font); }
 .name svg { flex: none; width: 14px; height: 14px; stroke: var(--color-primary); stroke-width: 2; fill: none; }
 .description { font-size: 11px; color: var(--color-font-label); line-height: 1.5; overflow-wrap: anywhere; }
 .hint, .error { margin: 0 !important; font-size: 11px; color: var(--color-font-label); line-height: 1.6; }
 .error { color: var(--color-font); }
-@media (max-width: 800px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-height: 620px) { .preview { height: 96px; } .picker { gap: 10px; } .thumbnail { height: 32px; } }
+@media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+@media (max-height: 620px) { .preview { height: 96px; } .picker { gap: 10px; } .thumbnail { height: 48px; } }
 </style>

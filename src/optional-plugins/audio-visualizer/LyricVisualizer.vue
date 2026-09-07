@@ -6,16 +6,18 @@
 import { ref, onMounted, onBeforeUnmount, watch } from '@common/utils/vueTools'
 import { useEvent, getAnalyserDataArray } from '@lyric/core/mainWindowChannel'
 import { isPlay } from '@lyric/store/state'
-import { drawSpectrum } from './spectrum'
+import { createVisualizerRenderer } from './renderer'
 import { preferences } from './preferences'
 
 const canvas = ref(null)
 let mounted = false
 let frame = null
+let resizeFrame = null
 let pending = false
 let observer
+let renderer
 let lastData = new Uint8Array()
-const draw = () => { if (mounted) drawSpectrum(canvas.value, lastData, { desktop: true, style: preferences.desktop, time: performance.now() }) }
+const draw = () => { if (mounted) renderer.draw(lastData, { desktop: true, style: preferences.desktop, time: performance.now() }) }
 const stop = () => {
   if (frame != null) cancelAnimationFrame(frame)
   frame = null
@@ -35,14 +37,22 @@ useEvent(event => {
   if (isPlay.value) frame = requestAnimationFrame(request)
 })
 watch(isPlay, playing => { stop(); if (playing) request() })
-watch(() => preferences.desktop, draw)
+watch(() => preferences.desktop, () => {
+  lastData = new Uint8Array()
+  draw()
+  if (isPlay.value) request()
+})
 onMounted(() => {
   mounted = true
-  observer = new ResizeObserver(draw)
+  renderer = createVisualizerRenderer(canvas.value)
+  observer = new ResizeObserver(() => {
+    if (resizeFrame != null) cancelAnimationFrame(resizeFrame)
+    resizeFrame = requestAnimationFrame(() => { resizeFrame = null; draw() })
+  })
   observer.observe(canvas.value)
   if (isPlay.value) request()
 })
-onBeforeUnmount(() => { mounted = false; stop(); observer?.disconnect(); lastData = new Uint8Array() })
+onBeforeUnmount(() => { mounted = false; stop(); if (resizeFrame != null) cancelAnimationFrame(resizeFrame); observer?.disconnect(); renderer?.dispose(); lastData = new Uint8Array() })
 </script>
 
 <style lang="less" module>

@@ -44,31 +44,6 @@ export const drawSpectrum = (canvas: HTMLCanvasElement, data: Uint8Array, option
       }
       break
     }
-    case 'bars': {
-      const count = Math.max(12, Math.min(64, Math.floor(width / 14)))
-      const values = bands(data, count)
-      const step = width / count
-      const gap = Math.max(2, step * 0.24)
-      values.forEach((value, index) => {
-        if (!value) return
-        const h = value * height * scale * 0.8
-        context.fillRect(index * step + gap / 2, height - h, step - gap, h)
-        context.fillRect(index * step + gap / 2, height - h - 4, step - gap, 2)
-      })
-      break
-    }
-    case 'mirror': {
-      const count = Math.max(16, Math.min(64, Math.floor(width / 12)))
-      const values = bands(data, Math.ceil(count / 2))
-      const step = width / count
-      const center = height * (preview ? 0.5 : 0.7)
-      for (let i = 0; i < count; i++) {
-        const value = values[Math.min(values.length - 1, Math.abs(i - Math.floor(count / 2)))]
-        const h = value * height * (preview ? 0.38 : 0.25)
-        context.fillRect(i * step + 1, center - h, Math.max(1, step - 3), h * 2)
-      }
-      break
-    }
     case 'wave': {
       const values = bands(data, 48)
       for (let layer = 0; layer < 3; layer++) {
@@ -93,46 +68,6 @@ export const drawSpectrum = (canvas: HTMLCanvasElement, data: Uint8Array, option
         context.fill()
         context.restore()
       }
-      break
-    }
-    case 'ring': {
-      const values = bands(data, 32)
-      const radius = Math.min(width * 0.2, height * (preview ? 0.24 : 0.17))
-      const cx = width / 2
-      const cy = height * (preview || desktop ? 0.5 : 0.7)
-      context.lineWidth = Math.max(1, Math.min(3, radius / 25))
-      context.beginPath()
-      context.arc(cx, cy, radius, 0, Math.PI * 2)
-      context.stroke()
-      // Give each radial bar most of its arc spacing while keeping visible gaps.
-      context.lineWidth = Math.max(1, Math.min(12, radius * Math.PI * 2 / 64 * 0.75))
-      for (let i = 0; i < 64; i++) {
-        const value = values[i < 32 ? i : 63 - i]
-        const angle = i / 64 * Math.PI * 2 - Math.PI / 2 + Math.sin(time / 3000) * 0.08
-        const outer = radius + value * radius * 0.8
-        context.beginPath()
-        context.moveTo(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius)
-        context.lineTo(cx + Math.cos(angle) * outer, cy + Math.sin(angle) * outer)
-        context.stroke()
-      }
-      break
-    }
-    case 'particles': {
-      const count = Math.max(18, Math.min(72, Math.round(width / 10)))
-      const values = bands(data, count)
-      values.forEach((value, index) => {
-        if (!value) return
-        const x = ((index * 0.61803398875) % 1) * width
-        const drift = (time / 7000 + index * 0.37) % 1
-        const y = height * (1 - (0.12 + drift * 0.75) * value * (preview ? 1.4 : 1))
-        const r = Math.max(1, Math.min(4, height / 70)) * (0.5 + value)
-        context.save()
-        context.globalAlpha *= 0.35 + value * 0.65
-        context.beginPath()
-        context.arc(x, y, r, 0, Math.PI * 2)
-        context.fill()
-        context.restore()
-      })
       break
     }
   }

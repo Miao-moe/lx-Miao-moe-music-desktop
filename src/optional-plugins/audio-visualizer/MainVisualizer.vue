@@ -1,18 +1,31 @@
 <template>
-  <div :class="$style.content" data-plugin-visualizer="main" :data-visualizer-style="preferences.main"><canvas ref="canvas" :class="$style.canvas" /></div>
+  <div :class="[$style.content, { [$style.radial]: preferences.main === 'radial' }]" data-plugin-visualizer="main" :data-visualizer-style="preferences.main"><canvas ref="canvas" :class="$style.canvas" /></div>
 </template>
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, watch } from '@common/utils/vueTools'
 import { isPlay } from '@renderer/store/player/state'
 import { getFrequencyData } from './analyser'
-import { drawSpectrum } from './spectrum'
+import { createVisualizerRenderer } from './renderer'
 import { preferences } from './preferences'
 
 const canvas = ref(null)
 let frame = null
 let mounted = false
 let observer
+let renderer
+let lyrics
+const bounds = () => {
+  if (preferences.main !== 'radial' || !lyrics) return
+  const region = lyrics.getBoundingClientRect()
+  const surface = canvas.value.getBoundingClientRect()
+  return {
+    x: Math.max(0, region.left - surface.left),
+    y: Math.max(0, region.top - surface.top),
+    width: Math.min(region.width, surface.right - region.left),
+    height: Math.min(region.height, surface.bottom - region.top),
+  }
+}
 const stop = () => {
   if (frame != null) cancelAnimationFrame(frame)
   frame = null
@@ -20,22 +33,27 @@ const stop = () => {
 const render = (time = performance.now()) => {
   frame = null
   if (!mounted) return
-  drawSpectrum(canvas.value, getFrequencyData(), { style: preferences.main, time })
-  if (isPlay.value) frame = requestAnimationFrame(render)
+  renderer.draw(getFrequencyData(preferences.main), { style: preferences.main, time, bounds: bounds() })
+  if (isPlay.value && !document.hidden) frame = requestAnimationFrame(render)
 }
 const refresh = () => { stop(); if (mounted) render() }
 watch(isPlay, refresh)
 watch(() => preferences.main, refresh)
 onMounted(() => {
   mounted = true
-  observer = new ResizeObserver(refresh)
+  renderer = createVisualizerRenderer(canvas.value)
+  lyrics = canvas.value.closest('[data-player-detail]')?.querySelector('[data-detail-part="lyrics"]')
+  observer = new ResizeObserver(() => { stop(); frame = requestAnimationFrame(render) })
   observer.observe(canvas.value)
+  if (lyrics) observer.observe(lyrics)
+  document.addEventListener('visibilitychange', refresh)
   render()
 })
-onBeforeUnmount(() => { mounted = false; stop(); observer?.disconnect() })
+onBeforeUnmount(() => { mounted = false; stop(); observer?.disconnect(); renderer?.dispose(); document.removeEventListener('visibilitychange', refresh) })
 </script>
 
 <style lang="less" module>
 .content { position: absolute; inset: 0; pointer-events: none; z-index: 100; }
+.radial { z-index: -1; }
 .canvas { width: 100%; height: 100%; }
 </style>
