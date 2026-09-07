@@ -10,7 +10,13 @@
   官方 QQ 群：<strong>1083366464</strong>
 </p>
 
-当前版本：**2.1.0**。本项目使用 Electron + Vue 3，原始上游为 [lyswhut/lx-music-desktop](https://github.com/lyswhut/lx-music-desktop)。
+当前版本：**2.2.0**。本项目使用 Electron + Vue 3，原始上游为 [lyswhut/lx-music-desktop](https://github.com/lyswhut/lx-music-desktop)。
+
+## 2.2.0 更新
+
+- **插件商店**：在“设置 → 插件商店”中从 GitHub 仓库的 master 分支获取官方插件，支持安装、更新和卸载。
+- **独立音效插件**：音效设置和音频可视化拆分为两个可选插件，可分别安装或卸载，保留已有个人配置。
+- **音频可视化**：支持经典频谱、柔波曲线和 audioMotion 环形频谱，点击可视化区域即可打开形式选择窗口；适配主界面、全屏及桌面歌词。
 
 ## 2.1.0 更新
 
