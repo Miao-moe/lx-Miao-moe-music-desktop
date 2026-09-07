@@ -49,8 +49,12 @@ const readFiles = async(directory, prefix = '') => {
 }
 
 async function main() {
-  const catalog = { schemaVersion: 1, plugins: [] }
-  for (const id of ids) {
+  const requested = process.argv.slice(2)
+  if (requested.some(id => !ids.includes(id))) throw new Error('Unknown plugin ID')
+  const selected = requested.length ? ids.filter(id => requested.includes(id)) : ids
+  const catalog = requested.length ? JSON.parse(await fs.readFile(path.join(catalogRoot, 'catalog.json'), 'utf8')) : { schemaVersion: 1, plugins: [] }
+  catalog.plugins = catalog.plugins.filter(plugin => !selected.includes(plugin.id))
+  for (const id of selected) {
     const source = path.join(root, 'src/optional-plugins', id)
     const manifest = JSON.parse(await fs.readFile(path.join(source, 'manifest.json'), 'utf8'))
     if (manifest.id !== id || !/^\d+\.\d+\.\d+$/.test(manifest.version)) throw new Error('Invalid plugin manifest')
@@ -101,6 +105,7 @@ async function main() {
     catalog.plugins.push({ id, version: manifest.version, apiVersion: manifest.apiVersion, path: relative, bytes: archive.length, sha256: hash })
     console.log(`Built ${id} ${manifest.version}: ${archive.length} bytes`)
   }
+  catalog.plugins.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id))
   await fs.writeFile(path.join(catalogRoot, 'catalog.json'), JSON.stringify(catalog, null, 2) + '\n')
   console.log('Official catalog written to plugins/official/catalog.json')
 }

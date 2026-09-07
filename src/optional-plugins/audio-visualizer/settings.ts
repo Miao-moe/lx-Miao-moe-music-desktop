@@ -9,9 +9,10 @@ export const setVisualization = async(key: 'player.audioVisualization' | 'deskto
       cancelButtonText: window.i18n.t('cancel_button_text'),
       confirmButtonText: window.i18n.t('confirm_button_text'),
     })
-    if (!confirmed) return
+    if (!confirmed) return false
     await setMediaDeviceId('default')
     saveMediaDeviceId('default')
   }
   updateSetting({ [key]: enabled })
+  return true
 }
