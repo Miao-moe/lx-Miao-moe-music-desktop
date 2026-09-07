@@ -104,6 +104,8 @@ export const drawSpectrum = (canvas: HTMLCanvasElement, data: Uint8Array, option
       context.beginPath()
       context.arc(cx, cy, radius, 0, Math.PI * 2)
       context.stroke()
+      // Give each radial bar most of its arc spacing while keeping visible gaps.
+      context.lineWidth = Math.max(1, Math.min(12, radius * Math.PI * 2 / 64 * 0.75))
       for (let i = 0; i < 64; i++) {
         const value = values[i < 32 ? i : 63 - i]
         const angle = i / 64 * Math.PI * 2 - Math.PI / 2 + Math.sin(time / 3000) * 0.08

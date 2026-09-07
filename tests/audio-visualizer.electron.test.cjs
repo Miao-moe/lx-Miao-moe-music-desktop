@@ -5,6 +5,7 @@ const { createHash } = require('node:crypto')
 const { test } = require('node:test')
 const { launch, route, settled, seedTrack, showDetail } = require('./helpers/motion-fixture.cjs')
 const { catalogRoot, mockGitHub, openStore, label, install, startSilentAudio } = require('./helpers/plugin-fixture.cjs')
+const { version: visualizerVersion } = require('../src/optional-plugins/audio-visualizer/manifest.json')
 
 const styles = ['spectrum', 'bars', 'mirror', 'wave', 'ring', 'particles']
 const showPlayer = async page => {
@@ -53,7 +54,7 @@ test('visualizer updates independently with six styles, a picker, saved choices 
     await app.evaluate(() => { global.__pluginCatalogOverride = null })
     await page.getByRole('button', { name: await label(page, 'setting__plugins_refresh'), exact: true }).click()
     await page.locator('[data-plugin-id="audio-visualizer"]').getByRole('button', { name: await label(page, 'setting__plugins_update'), exact: true }).click()
-    await page.waitForFunction(() => document.querySelector('[data-plugin-id="audio-visualizer"]')?.textContent.includes('v1.1.0'))
+    await page.waitForFunction(version => document.querySelector('[data-plugin-id="audio-visualizer"]')?.textContent.includes(`v${version}`), visualizerVersion)
     await assert.rejects(fs.stat(path.join(dataRoot, 'plugins', oldRegistry['audio-visualizer'].directory)), { code: 'ENOENT' })
     await page.evaluate(() => {
       window.__visualizerAnalysers = []

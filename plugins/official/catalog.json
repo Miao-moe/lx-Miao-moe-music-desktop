@@ -11,11 +11,11 @@
     },
     {
       "id": "audio-visualizer",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "apiVersion": 1,
-      "path": "audio-visualizer/1.1.0/3397f7f8fb941333672c17a101ef1379e93ef6d6f594467bebdafeb62f82a3a4.lxplugin",
-      "bytes": 16164,
-      "sha256": "3397f7f8fb941333672c17a101ef1379e93ef6d6f594467bebdafeb62f82a3a4"
+      "path": "audio-visualizer/1.1.1/22f730b5b3c177e25cc10b24100c34d864df7500f41312618524591ca2c5f2b6.lxplugin",
+      "bytes": 16136,
+      "sha256": "22f730b5b3c177e25cc10b24100c34d864df7500f41312618524591ca2c5f2b6"
     }
   ]
 }
