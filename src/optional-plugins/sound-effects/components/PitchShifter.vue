@@ -26,7 +26,7 @@ import { computed } from '@common/utils/vueTools'
 import { setMediaDeviceId } from '@renderer/plugins/player'
 import { appSetting, saveMediaDeviceId, updateSetting } from '@renderer/store/setting'
 // import AddPitchShifterPresetBtn from './AddPitchShifterPresetBtn.vue'
-// import { getUserPitchShifterPresetList, removeUserPitchShifterPreset } from '@renderer/store/soundEffect'
+// import { getUserPitchShifterPresetList, removeUserPitchShifterPreset } from '../presets'
 // import { semitones } from '@renderer/plugins/player'
 
 // const setting = reactive({

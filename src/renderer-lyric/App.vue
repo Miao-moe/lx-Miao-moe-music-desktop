@@ -30,7 +30,7 @@
 <script setup>
 import useWindowSize from '@lyric/useApp/useWindowSize'
 import useHoverHide from '@lyric/useApp/useHoverHide'
-import { computed, onMounted } from '@common/utils/vueTools'
+import { computed, onMounted, onBeforeUnmount } from '@common/utils/vueTools'
 import { setting } from '@lyric/store/state'
 import { sendConnectMainWindowEvent } from '@lyric/utils/ipc'
 import useCommon from '@lyric/useApp/useCommon'
@@ -38,9 +38,11 @@ import useLyric from '@lyric/useApp/useLyric'
 import useTheme from '@lyric/useApp/useTheme'
 import { init as initLyricPlayer } from '@lyric/core/lyric'
 import usePauseHide from '@lyric/useApp/usePauseHide'
+import { initOptionalPlugins } from '@lyric/store/optionalPlugins'
 
 const isShowResize = window.os != 'windows'
 useCommon()
+onBeforeUnmount(initOptionalPlugins())
 const { handleMouseDown, handleTouchDown } = useWindowSize()
 const isHoverHide = useHoverHide()
 useLyric()

@@ -64,6 +64,7 @@ dd(:aria-label="$t('setting__play_mediaDevice_title')")
 <script>
 import { ref, onBeforeUnmount, watch, computed } from '@common/utils/vueTools'
 import { hasInitedAdvancedAudioFeatures, setMediaDeviceId } from '@renderer/plugins/player'
+import { visualizerInstalled } from '@renderer/store/optionalPlugins'
 import { dialog } from '@renderer/plugins/Dialog'
 import { useI18n } from '@renderer/plugins/i18n'
 import { appSetting, saveMediaDeviceId, updateSetting } from '@renderer/store/setting'
@@ -101,7 +102,7 @@ export default {
           confirmButtonText: t('alert_button_text'),
         })
         mediaDeviceId.value = appSetting['player.mediaDeviceId']
-      } else if (appSetting['player.audioVisualization']) {
+      } else if (visualizerInstalled.value && appSetting['player.audioVisualization']) {
         const confirm = await dialog.confirm({
           message: t('setting__play_media_device_tip'),
           cancelButtonText: t('cancel_button_text'),

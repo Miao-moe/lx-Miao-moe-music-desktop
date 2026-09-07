@@ -16,6 +16,8 @@ import usePlayer from './usePlayer'
 import useSettingSync from './useSettingSync'
 import { useRouter } from '@common/utils/vueRouter'
 import handleListAutoUpdate from './listAutoUpdate'
+import { onBeforeUnmount } from '@common/utils/vueTools'
+import { initOptionalPlugins } from '@renderer/store/optionalPlugins'
 
 
 export default () => {
@@ -33,6 +35,8 @@ export default () => {
   useWindowState()
   useEventListener()
   const initPlayer = usePlayer()
+  const pluginsReady = initOptionalPlugins()
+  onBeforeUnmount(() => { void pluginsReady.then(dispose => { dispose() }) })
   const handleEnvParams = useHandleEnvParams()
   const initData = useDataInit()
   const initDeeplink = useDeeplink()
@@ -63,7 +67,8 @@ export default () => {
     })
 
     // 初始化我的列表、下载列表等数据
-    void initData().then(() => {
+    void initData().then(async() => {
+      await pluginsReady
       initPlayer()
       handleEnvParams(envParams) // 处理传入的启动参数
       void initDeeplink(envParams)

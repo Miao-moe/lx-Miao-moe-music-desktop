@@ -25,10 +25,11 @@
 
 <script setup>
 import { onMounted, ref } from '@common/utils/vueTools'
-import { freqs, freqsPreset, setMediaDeviceId } from '@renderer/plugins/player'
+import { freqs, freqsPreset } from '../presetsData'
+import { setMediaDeviceId } from '@renderer/plugins/player'
 import { appSetting, saveMediaDeviceId, updateSetting } from '@renderer/store/setting'
 import AddEQPresetBtn from './AddEQPresetBtn.vue'
-import { getUserEQPresetList, removeUserEQPreset } from '@renderer/store/soundEffect'
+import { getUserEQPresetList, removeUserEQPreset } from '../presets'
 
 const labels = freqs.map(num => num < 1000 ? num : `${num / 1000}k`)
 

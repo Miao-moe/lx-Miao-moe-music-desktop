@@ -1,5 +1,5 @@
 import Lyric from '@common/utils/lyric-font-player'
-import { getAnalyser, getCurrentTime as getPlayerCurrentTime } from '@renderer/plugins/player'
+import { getCurrentTime as getPlayerCurrentTime } from '@renderer/plugins/player'
 import { lyric, setLines, setOffset, setTempOffset, setText } from '@renderer/store/player/lyric'
 import { isPlay, musicInfo } from '@renderer/store/player/state'
 import { setStatusText } from '@renderer/store/player/action'
@@ -31,29 +31,9 @@ const syncLyricPosition = (syncDesktop = true, restorePaused = false) => {
   })
 }
 
-const analyserTools: {
-  dataArray: Uint8Array
-  bufferLength: number
-  analyser: AnalyserNode | null
-  sendDataArray: () => void
-} = {
-  dataArray: new Uint8Array(),
-  bufferLength: 0,
-  analyser: null,
-  sendDataArray() {
-    if (this.analyser == null) {
-      this.analyser = getAnalyser()
-      // console.log(this.analyser)
-      if (!this.analyser) return
-      this.bufferLength = this.analyser.frequencyBinCount
-    }
-    const dataArray = new Uint8Array(this.bufferLength)
-    this.analyser.getByteFrequencyData(dataArray)
-    sendDesktopLyricInfo({
-      action: 'send_analyser_data_array',
-      data: dataArray,
-    }, [dataArray.buffer])
-  },
+let desktopAnalyserProvider: (() => Uint8Array) | null = null
+export const setDesktopAnalyserProvider = (provider: (() => Uint8Array) | null) => {
+  desktopAnalyserProvider = provider
 }
 
 export const sendDesktopLyricInfo = (info: LX.DesktopLyric.LyricActions, transferList?: Transferable[]) => {
@@ -93,7 +73,7 @@ const handleDesktopLyricMessage = (action: LX.DesktopLyric.WinMainActions) => {
       })
       break
     case 'get_analyser_data_array':
-      analyserTools.sendDataArray()
+      sendDesktopLyricInfo({ action: 'send_analyser_data_array', data: desktopAnalyserProvider?.() ?? new Uint8Array() })
       break
     default:
       break

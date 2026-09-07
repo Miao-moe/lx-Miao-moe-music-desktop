@@ -1,0 +1,7 @@
+{
+  "id": "sound-effects",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "entry": "renderer.js",
+  "styles": ["renderer.css"]
+}

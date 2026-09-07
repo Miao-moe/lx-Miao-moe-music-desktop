@@ -76,6 +76,7 @@ import { useRoute } from '@common/utils/vueRouter'
 
 import SettingBasic from './components/SettingBasic.vue'
 import SettingPlay from './components/SettingPlay.vue'
+import SettingPluginStore from './components/SettingPluginStore.vue'
 import SettingPlayDetail from './components/SettingPlayDetail.vue'
 import SettingDesktopLyric from './components/SettingDesktopLyric.vue'
 import SettingSearch from './components/SettingSearch.vue'
@@ -97,6 +98,7 @@ export default {
   components: {
     SettingBasic,
     SettingPlay,
+    SettingPluginStore,
     SettingPlayDetail,
     SettingDesktopLyric,
     SettingSearch,
@@ -125,6 +127,7 @@ export default {
       return [
         { id: 'SettingBasic', title: t('setting__basic'), prefixes: ['setting__basic', 'theme'], keys: ['setting__play_timeout'] },
         { id: 'SettingPlay', title: t('setting__play'), prefixes: ['setting__play', 'setting__player'], excludes: ['setting__play_detail', 'setting__play_timeout'] },
+        { id: 'SettingPluginStore', title: t('setting__plugins'), prefixes: ['setting__plugins', 'player__sound_effect'], keys: ['audio_visualization', 'setting__desktop_lyric_audio_visualization'] },
         { id: 'SettingPlayDetail', title: t('setting__play_detail'), prefixes: ['setting__play_detail'] },
         { id: 'SettingDesktopLyric', title: t('setting__desktop_lyric'), prefixes: ['setting__desktop_lyric'] },
         { id: 'SettingSearch', title: t('setting__search'), prefixes: ['setting__search'] },
@@ -209,7 +212,9 @@ export default {
 
       for (const target of targets) {
         let itemRoot
-        if (target.tagName == 'H3') {
+        if (target.closest('article[data-plugin-id]')) {
+          itemRoot = target.closest('article[data-plugin-id]')
+        } else if (target.tagName == 'H3') {
           itemRoot = target.closest('dd')
         } else if (target.tagName == 'H4') {
           itemRoot = target.parentElement
@@ -238,6 +243,13 @@ export default {
       clearSettingFilterState()
       void nextTick(() => dom_filter_input.value?.focus())
     }
+
+    watch(() => route.query.name, (name) => {
+      if (tocList.value.some(item => item.id === name)) {
+        settingFilter.value = ''
+        toggleTab(name)
+      }
+    })
 
     watch(visibleTocList, (list) => {
       if (isFiltering.value && list.length && !list.some(group => group.id == avtiveComponentName.value)) {

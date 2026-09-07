@@ -8,7 +8,7 @@
 <script setup>
 import { ref, nextTick } from '@common/utils/vueTools'
 import { appSetting } from '@renderer/store/setting'
-import { saveUserEQPreset } from '@renderer/store/soundEffect'
+import { saveUserEQPreset } from '../presets'
 
 const isEditing = ref(false)
 const input = ref(false)

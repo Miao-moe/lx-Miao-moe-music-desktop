@@ -13,6 +13,7 @@ import download from './download'
 import soundEffect from './soundEffect'
 import openAPI from './openAPI'
 import cookieLogin from './cookieLogin'
+import optionalPlugins from '@main/modules/optionalPlugins'
 import { sendEvent } from '../main'
 
 export * from './app'
@@ -41,6 +42,7 @@ export default () => {
   soundEffect()
   openAPI()
   cookieLogin()
+  optionalPlugins()
 
   global.lx.event_app.on('updated_config', (keys, setting) => {
     sendConfigChange(setting)

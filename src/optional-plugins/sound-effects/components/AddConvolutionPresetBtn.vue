@@ -8,7 +8,7 @@
 <script setup>
 import { ref, nextTick } from '@common/utils/vueTools'
 import { appSetting } from '@renderer/store/setting'
-import { saveUserConvolutionPreset } from '@renderer/store/soundEffect'
+import { saveUserConvolutionPreset } from '../presets'
 
 defineProps({
   disabled: {

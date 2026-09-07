@@ -1,0 +1,9 @@
+{
+  "id": "audio-visualizer",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "entry": "renderer.js",
+  "lyricEntry": "lyric.js",
+  "styles": ["renderer.css"],
+  "lyricStyles": ["lyric.css"]
+}

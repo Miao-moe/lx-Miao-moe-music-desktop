@@ -1,0 +1,13 @@
+{
+  "extends": "../renderer/tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@common/*": ["../common/*"],
+      "@renderer/*": ["../renderer/*"],
+      "@lyric/*": ["../renderer-lyric/*"],
+      "@root/*": ["../*"]
+    },
+    "typeRoots": ["../renderer/types", "../renderer-lyric/types"]
+  },
+  "include": ["./**/*.ts", "./**/*.js", "./**/*.vue", "../common/types/**/*.d.ts", "../renderer/types/**/*.d.ts"]
+}

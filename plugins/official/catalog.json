@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "plugins": [
+    {
+      "id": "sound-effects",
+      "version": "1.0.0",
+      "apiVersion": 1,
+      "path": "sound-effects/1.0.0/a170f8018bcade0c7084559372e544c968f0c8dc348695090b60570918181daa.lxplugin",
+      "bytes": 2961255,
+      "sha256": "a170f8018bcade0c7084559372e544c968f0c8dc348695090b60570918181daa"
+    },
+    {
+      "id": "audio-visualizer",
+      "version": "1.0.0",
+      "apiVersion": 1,
+      "path": "audio-visualizer/1.0.0/8630c2205c4dfeb395b241863264955741b68f8a855d1911db66a0f2a318d735.lxplugin",
+      "bytes": 5471,
+      "sha256": "8630c2205c4dfeb395b241863264955741b68f8a855d1911db66a0f2a318d735"
+    }
+  ]
+}

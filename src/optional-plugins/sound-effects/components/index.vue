@@ -1,5 +1,5 @@
 <template>
-  <button :class="$style.btn" :aria-label="$t('player__sound_effect')" @click="visible = true">
+  <button v-bind="$attrs" :class="$style.btn" :aria-label="$t('player__sound_effect')" @click="visible = true">
     <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" width="90%" viewBox="0 0 24 24" space="preserve">
       <use xlink:href="#icon-tune-variant" />
     </svg>
@@ -7,7 +7,7 @@
   <material-modal :show="visible" bg-close="bg-close" :teleport="teleport" @close="visible = false">
     <!-- <main :class="$style.main"> -->
     <!-- <h2 :class="$style.title">{{ $t('theme_edit_modal__title') }}</h2> -->
-    <div :class="$style.content">
+    <div :class="$style.content" data-plugin-sound-dialog>
       <div :class="['scroll', $style.row]">
         <AudioConvolution />
         <PitchShifter />
@@ -52,6 +52,10 @@ watch(visible, (visible) => {
 })
 
 
+</script>
+
+<script>
+export default { inheritAttrs: false }
 </script>
 
 <style lang="less" module>

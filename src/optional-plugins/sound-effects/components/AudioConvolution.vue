@@ -37,9 +37,10 @@
 <script setup>
 import { ref, onMounted, computed } from '@common/utils/vueTools'
 import { appSetting, saveMediaDeviceId, updateSetting } from '@renderer/store/setting'
-import { convolutions, setMediaDeviceId } from '@renderer/plugins/player'
+import { convolutions } from '../presetsData'
+import { setMediaDeviceId } from '@renderer/plugins/player'
 import AddConvolutionPresetBtn from './AddConvolutionPresetBtn.vue'
-import { getUserConvolutionPresetList, removeUserConvolutionPreset } from '@renderer/store/soundEffect'
+import { getUserConvolutionPresetList, removeUserConvolutionPreset } from '../presets'
 
 const updateConvolution = async val => {
   if (appSetting['player.mediaDeviceId'] != 'default') {
