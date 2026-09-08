@@ -53,6 +53,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    controlled: {
+      type: Boolean,
+      default: false,
+    },
   },
   emits: ['update:modelValue', 'change'],
   data() {
@@ -85,6 +89,12 @@ export default {
       }
       this.$emit('update:modelValue', modelValue)
       this.$emit('change', modelValue)
+      // Async validation may leave the controlled value unchanged (for example, login failure).
+      if (this.controlled) {
+        this.$nextTick(() => {
+          if (this.$refs.dom_input) this.$refs.dom_input.checked = this.checked
+        })
+      }
     },
     setValue(value) {
       let checked
@@ -103,6 +113,7 @@ export default {
     },
     handleToggle(event) {
       event.lx_handled = true
+      if (this.disabled) return
       if (this.need) {
         if (this.$refs.dom_input.checked) return
         this.$refs.dom_input.checked = true

@@ -1,6 +1,6 @@
 import { tempListMeta, userLists } from '@renderer/store/list/state'
 import { dialog } from '@renderer/plugins/Dialog'
-import syncSourceList from '@renderer/store/list/syncSourceList'
+import syncSourceList, { showSyncError } from '@renderer/store/list/syncSourceList'
 import { getListDetail, getListDetailAll } from '@renderer/store/songList/action'
 import { createUserList, setTempList } from '@renderer/store/list/action'
 import { playList, refreshPlayQueueFromList } from '@renderer/core/player/action'
@@ -21,7 +21,7 @@ export const addSongListDetail = async(id: string, source: LX.OnlineSource, name
       confirmButtonText: window.i18n.t('confirm_button_text'),
     })
     if (!confirm) return
-    void syncSourceList(targetList)
+    void syncSourceList(targetList).catch(showSyncError)
     return
   }
 

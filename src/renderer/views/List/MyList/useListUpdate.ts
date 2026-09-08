@@ -1,6 +1,6 @@
 import { ref } from '@common/utils/vueTools'
 import { dialog } from '@renderer/plugins/Dialog'
-import syncSourceList from '@renderer/store/list/syncSourceList'
+import syncSourceList, { showSyncError } from '@renderer/store/list/syncSourceList'
 import { useI18n } from '@renderer/plugins/i18n'
 
 
@@ -15,7 +15,7 @@ export default () => {
       confirmButtonText: t('lists__remove_tip_button'),
     }).then(isSync => {
       if (!isSync) return
-      void syncSourceList(listInfo)
+      void syncSourceList(listInfo).catch(showSyncError)
     })
   }
 

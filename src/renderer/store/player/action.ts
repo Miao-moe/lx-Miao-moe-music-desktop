@@ -269,6 +269,7 @@ export const addTempPlayList = (list: LX.Player.TempPlayListItem[]) => {
   showToast(window.i18n.t('player__play_list_added'))
   // 未在播放任何歌曲时，直接开始播放插入的歌曲（保持原有行为）
   if (!playMusicInfo.musicInfo) void playQueueById(insertIndex)
+  return insertIndex
 }
 /**
  * 从稍后播放列表移除歌曲

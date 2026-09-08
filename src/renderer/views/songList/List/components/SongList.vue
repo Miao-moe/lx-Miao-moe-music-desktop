@@ -1,5 +1,5 @@
 <template>
-  <div :class="$style.container">
+  <common-list-loading :load-key="props.listInfo.list" :loading="isMessage(props.listInfo.noItemLabel, 'list__loading')" :class="$style.container">
     <div v-show="!props.listInfo.noItemLabel" ref="dom_list_ref" :class="$style.listContent" class="scroll">
       <ul>
         <li
@@ -39,7 +39,7 @@
       <p v-text="props.listInfo.noItemLabel" />
       <base-btn v-if="isMessage(props.listInfo.noItemLabel, 'list__load_failed')" class="ui-state-retry" min @click="emit('retry')">{{ $t('reload') }}</base-btn>
     </div>
-  </div>
+  </common-list-loading>
 </template>
 
 <script setup lang="ts">
@@ -198,7 +198,6 @@ defineExpose({
   height: 100%;
   object-fit: cover;
   transition: transform var(--duration-normal) var(--ease-standard);
-  animation: songlist-cover-in var(--duration-normal) var(--ease-standard) both;
 }
 
 .desc {
@@ -268,11 +267,6 @@ defineExpose({
     font-size: 24px;
     color: var(--color-font-label);
   }
-}
-
-@keyframes songlist-cover-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 
 </style>

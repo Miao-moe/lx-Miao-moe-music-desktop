@@ -83,6 +83,7 @@ export default (songmid) => {
       source: 'tx',
       interval: formatPlayTime(item.interval),
       songId: item.id,
+      songType: item.type,
       albumMid: item.album?.mid ?? '',
       strMediaMid: item.file.media_mid,
       songmid: item.mid,
@@ -95,4 +96,3 @@ export default (songmid) => {
     }
   })
 }
-

@@ -100,6 +100,7 @@ const modules = {
     get_other_source_count: 'get_other_source_count',
     get_data: 'get_data',
     save_data: 'save_data',
+    playlist_writeback_save: 'playlist_writeback_save',
     get_sound_effect_eq_preset: 'get_sound_effect_eq_preset',
     save_sound_effect_eq_preset: 'save_sound_effect_eq_preset',
     get_sound_effect_convolution_preset: 'get_sound_effect_convolution_preset',

@@ -21,9 +21,11 @@ import {
   ref,
   nextTick,
   watch,
+  inject,
   onMounted,
   onBeforeUnmount,
 } from 'vue'
+import { listLoadingKey } from '@renderer/utils/compositions/useListLoading'
 
 /**
  * 生成防抖函数
@@ -131,6 +133,7 @@ export default {
   },
   emits: ['scroll'],
   setup(props, { emit }) {
+    const listLoading = inject(listLoadingKey, null)
     const views = ref([])
     const dom_scrollContainer = ref(null)
     let isListScrolling = false
@@ -143,6 +146,21 @@ export default {
     let isAutoScrolling = false
     let scrollToValue = 0
     let resizeTimer = null
+    let finishRender = null
+    let viewRequest = 0
+
+    const renderView = (start, end) => {
+      const current = ++viewRequest
+      requestAnimationFrame(() => {
+        if (!dom_scrollContainer.value || current !== viewRequest) return
+        views.value = createList(start, end)
+        void nextTick(() => {
+          if (current !== viewRequest) return
+          finishRender?.()
+          finishRender = null
+        })
+      })
+    }
 
     const createList = (startIndex, endIndex) => {
       const cache = cachedList.slice(startIndex, endIndex)
@@ -192,15 +210,9 @@ export default {
         //   views.value = createList(currentStartRenderIndex, currentEndRenderIndex)
         // } else return
         if (currentScrollTop == scrollTop && endIndex >= currentEndIndex) return
-        requestAnimationFrame(() => {
-          if (!dom_scrollContainer.value) return
-          views.value = createList(currentStartRenderIndex, currentEndRenderIndex)
-        })
+        renderView(currentStartRenderIndex, currentEndRenderIndex)
       } else {
-        requestAnimationFrame(() => {
-          if (!dom_scrollContainer.value) return
-          views.value = createList(currentStartRenderIndex, currentEndRenderIndex)
-        })
+        renderView(currentStartRenderIndex, currentEndRenderIndex)
       }
       startIndex = currentStartIndex
       endIndex = currentEndIndex
@@ -286,6 +298,9 @@ export default {
     })
 
     const handleReset = list => {
+      viewRequest++
+      finishRender?.()
+      finishRender = listLoading?.hold()
       cachedList = Array(list.length)
       startIndex = -1
       endIndex = -1
@@ -297,6 +312,8 @@ export default {
         })
       } else {
         views.value = []
+        finishRender?.()
+        finishRender = null
       }
     }
     watch([() => props.itemHeight, () => props.overscan], () => {
@@ -311,21 +328,12 @@ export default {
         capture: false,
         passive: true,
       })
-      cachedList = Array(props.list.length)
-      startIndex = -1
-      endIndex = -1
-
-      if (props.list.length) {
-        void nextTick(() => {
-          requestAnimationFrame(() => {
-            console.log('updateView')
-            updateView()
-          })
-        })
-      }
+      handleReset(props.list)
       window.addEventListener('resize', handleResize)
     })
     onBeforeUnmount(() => {
+      viewRequest++
+      finishRender?.()
       dom_scrollContainer.value?.removeEventListener('scroll', onScroll)
       window.removeEventListener('resize', handleResize)
       if (resizeTimer) clearTimeout(resizeTimer)

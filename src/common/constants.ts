@@ -43,6 +43,7 @@ export const DATA_KEYS = {
   listScrollPosition: 'listScrollPosition',
   listPrevSelectId: 'listPrevSelectId',
   listUpdateInfo: 'listUpdateInfo',
+  playlistWriteback: 'playlistWriteback',
   ignoreVersion: 'ignoreVersion',
 
   leaderboardSetting: 'leaderboardSetting',

@@ -27,7 +27,8 @@ function fixture(read) {
     '@common/rendererIpc': { rendererInvoke: (_channel, id) => read(id), rendererOn: (name, fn) => listeners.set(name, fn), rendererOff: () => {} },
     '@common/ipcNames': { PLAYER_EVENT_NAME: new Proxy({}, { get: (_target, key) => key }) },
     './action': actions,
-    './state': { allMusicList: cache },
+    './state': { allMusicList: cache, userLists: [] },
+    '../localMutationLock': { withLocalListLocks: async(_ids, task) => task() },
   }
   vm.runInNewContext(compiled, { exports, require: name => { assert.ok(name in modules, name); return modules[name] } })
   exports.registerListAction({ 'list.addMusicLocationType': 'bottom' })

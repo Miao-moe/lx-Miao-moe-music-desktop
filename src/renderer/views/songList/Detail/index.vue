@@ -1,8 +1,9 @@
 <template>
-  <div :class="$style.container">
+  <common-list-loading :load-key="listDetailInfo.list" :class="$style.container">
     <div :class="$style.songListHeader">
-      <div :class="$style.songListHeaderLeft" :style="{ backgroundImage: 'url('+(picUrl || listDetailInfo.info.img)+')' }">
-        <!-- <span v-if="listDetailInfo.info.play_count" :class="$style.playNum">{{ listDetailInfo.info.play_count }}</span> -->
+      <div :class="$style.songListHeaderLeft">
+        <common-cover-image v-if="(picUrl || listDetailInfo.info.img) && !coverError" :src="picUrl || listDetailInfo.info.img" :size="80" :alt="listDetailInfo.info.name" @error="coverError = true" />
+        <svg v-else viewBox="0 0 24 24"><use xlink:href="#icon-music" /></svg>
       </div>
       <div :class="$style.songListHeaderMiddle">
         <h3 :title="listDetailInfo.info.name">{{ listDetailInfo.info.name }}</h3>
@@ -39,7 +40,7 @@
         @retry="handleRetry"
       />
     </div>
-  </div>
+  </common-list-loading>
 </template>
 
 <script lang="ts">
@@ -109,6 +110,7 @@ export default {
   beforeRouteUpdate: verifyQueryParams,
   setup() {
     const router = useRouter()
+    const coverError = ref(false)
 
     const {
       listRef,
@@ -116,6 +118,7 @@ export default {
       getListData,
       handlePlayList,
     } = useList()
+    watch(() => picUrl.value || listDetailInfo.info.img, () => { coverError.value = false })
 
 
     const togglePage = (page: number) => {
@@ -156,6 +159,7 @@ export default {
       togglePage,
       handleRetry,
       addSongListDetail,
+      coverError,
       playSongListDetail,
       handlePlayList,
       handleBack,
@@ -195,6 +199,18 @@ export default {
   background-size: cover;
   opacity: .9;
   box-shadow: 0 0 2px 0 rgba(0,0,0,.2);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  svg {
+    width: 40%;
+    height: 40%;
+    margin: 30%;
+    fill: var(--color-text-muted);
+  }
 }
 .playNum {
   position: absolute;

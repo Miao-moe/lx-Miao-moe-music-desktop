@@ -28,6 +28,8 @@
 | 切换平台名称 | 按设置显示平台原名或别名 |
 | 重试加载 | 部分列表提供重试入口；页面异常时可通过错误页重试或切页恢复 |
 
+**歌曲换源：** 默认按歌名、歌手和时长筛选匹配版本，并优先打开有匹配歌曲的平台；找不到时可取消“仅显示匹配版本”查看其他搜索结果。点击试听会直接播放并选中该候选，切换平台会清空旧选择。确认后在原位置替换歌曲，保存失败保留原曲。
+
 > 歌手头像、简介等信息由平台提供；缺失时显示占位内容。
 
 ### 歌单和封面缓存
@@ -39,6 +41,7 @@
 | 平台分组 | Cookie 导入的歌单按平台分组，支持折叠并记住展开状态 |
 | 拖动排序 | 长按约 **450 ms**，或按住 <kbd>Ctrl</kbd> / <kbd>Command</kbd> 拖动；限当前分组内 |
 | 封面加载 | 按可见区域与显示尺寸加载，合并重复请求；缩略图失败时尝试原图 |
+| 一起显示 | 列表数据与首屏封面准备好后统一显示；等待期间显示加载提示，封面失败或超时则使用占位图 |
 | 跨次启动复用 | 封面图片与获取到的封面地址保存到磁盘缓存 |
 | 缓存管理 | 设置 → 其他设置 → 资源缓存，可查看和清理 |
 
@@ -57,15 +60,16 @@ flowchart LR
     A["平台自建歌单"] -->|手动同步 / 启动时同步| B["我的列表 · 本地副本"]
     B --> C["浏览与播放"]
     B --> D["本地编辑"]
+    D -->|单独开启「同步修改到平台」| A
 ```
 
-| 平台 | 自建歌单导入 | 播放记录上报 |
-| --- | :---: | :---: |
-| 网易云 | ✓ | ✓ |
-| QQ 音乐 | ✓ | ✓ |
-| 酷狗 | ✓ | ✓ |
-| 酷我 | ✓ | — |
-| 咪咕 | ✓ | — |
+| 平台 | 自建歌单导入 | 歌单修改回传 | 播放记录上报 |
+| --- | :---: | --- | :---: |
+| 网易云 | ✓ | 歌曲增删、改名、歌曲排序 | ✓ |
+| QQ 音乐 | ✓ | 歌曲增删 | ✓ |
+| 酷狗 | ✓ | 歌曲增删 | ✓ |
+| 酷我 | ✓ | 暂不支持 | — |
+| 咪咕 | ✓ | 歌曲增删、改名 | — |
 
 | 设置或操作 | 作用 |
 | --- | --- |
@@ -75,7 +79,13 @@ flowchart LR
 | 将播放记录同步回平台 | 自然播放完成或自动衔接下一首时上报；同一首歌在 30 分钟内去重 |
 | 推荐歌单 | 支持的平台会携带已保存的 Cookie 请求推荐，内容由平台返回 |
 
-> **同步规则：** 云端 → 本地。重复同步会用云端内容覆盖对应本地副本中的歌曲；本地编辑不会自动上传。
+**歌单修改回传：** 在“我的列表 → 列表更新管理”中，为歌单开启“同步修改到平台”（默认关闭）。需要保存对应平台的有效 Cookie，且歌单必须属于当前账号；网易云“我喜欢的音乐”等特殊歌单暂不支持。
+
+- 开启时建立同步基准，仅回传之后的修改，已有本地修改不会追溯上传。只同步同平台歌曲，其他平台和本地歌曲不会上传。
+- 回传歌曲增删时保留平台端独立添加的歌曲。改名或排序在两端发生不同修改时暂停并提示核对；不支持回传的改名、排序仍仅在本地生效。
+- 待回传或回传失败时，暂停云端覆盖本地列表；修改和进度会保留，重启、恢复联网或点击“立即回传”可重试。拉取期间的新编辑也不会被覆盖。
+- 删除本地歌单仅解除关联，不删除平台歌单。恢复全部列表备份后关闭旧绑定，需要重新开启。
+- 回传关闭时，手动或自动拉取仍以平台内容覆盖本地副本；未回传的修改可能被覆盖。
 
 - Cookie 字段齐全不代表登录仍有效，可通过“测试获取歌单”确认。
 - 播放记录上报失败不影响播放；酷我和咪咕暂不支持上报。
@@ -227,10 +237,19 @@ macOS、Linux 的脚本与目标架构见 [package.json](./package.json)，构�
 npm run lint
 
 # Cookie 歌单、缩略图、歌单缓存、封面地址缓存和生产请求回归
-node --test tests/cookie-playlists.test.cjs tests/cover-thumbnail.test.cjs tests/list-data-cache.test.cjs tests/music-cover-cache.test.cjs tests/request.production.test.cjs
+node --test tests/cookie-playlists.test.cjs tests/playlist-writeback.test.cjs tests/playlist-writeback-api.test.cjs tests/cover-thumbnail.test.cjs tests/list-data-cache.test.cjs tests/music-cover-cache.test.cjs tests/request.production.test.cjs
+
+# 歌单回传界面和持久化检查（先构建 main、renderer；隔离配置与本地模拟接口）
+node --test tests/playlist-writeback.electron.test.cjs
+
+# 换源候选、试听目标、替换事务及界面回归（界面测试使用生产构建）
+node --test tests/music-toggle.test.cjs tests/music-toggle.electron.test.cjs
 
 # 先保持 npm run dev 运行，再在另一个终端执行 Electron 界面回归
 node --test --test-concurrency=1 tests/motion.electron.test.cjs tests/motion-restart.electron.test.cjs tests/cover-image.electron.test.cjs tests/list-cache.electron.test.cjs
+
+# 列表和封面统一显示：慢速加载、解码、占位、快速切换、卡片与详情页
+node --test tests/list-loading.electron.test.cjs
 ```
 
 界面测试使用临时用户数据目录，覆盖：

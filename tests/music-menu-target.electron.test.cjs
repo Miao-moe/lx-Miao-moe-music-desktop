@@ -12,9 +12,8 @@ test('song menus keep the clicked song when the playlist changes', { timeout: 45
       const component = window.__motionComponents().find(c => c.type.name === 'MusicList' && 'list' in c.setupState)
       window.__menuTargetList = component
       // Search providers are unrelated to which song the menu passes into the dialog.
-      const modal = window.__motionComponents().find(c => c.parent === component && 'searchKey' in c.data)
+      const modal = window.__motionComponents().find(c => 'searchKey' in c.data && 'musicInfo' in c.props)
       modal.proxy.loadList = function() {
-        this.tabs = []
         this.lists = {}
         this.loading = false
       }

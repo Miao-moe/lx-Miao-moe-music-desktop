@@ -1,5 +1,5 @@
 <template>
-  <div :class="$style.songList" :style="{ '--list-cover-size': `${appSetting['list.coverSize']}px` }">
+  <common-list-loading :load-key="list" :loading="isMessage(noItem, 'list__loading')" :class="$style.songList" :style="{ '--list-cover-size': `${appSetting['list.coverSize']}px` }">
     <!-- <transition enter-active-class="animated-fast fadeIn" leave-active-class="animated-fast fadeOut"> -->
     <div :class="$style.list">
       <div class="thead">
@@ -35,7 +35,7 @@
               >
                 <div class="list-item-cell no-select num" style="flex: 0 0 5%;" @click.stop>{{ index + 1 }}</div>
                 <div class="list-item-cell no-select" :class="$style.cover" style="flex: 0 0 calc(var(--list-cover-size) + 12px); padding: 0 6px;">
-                  <common-cover-image v-if="getCover(item) && !coverErrorSet.has(getCoverKey(item))" :src="getCover(item)" :size="appSetting['list.coverSize']" :alt="item.name" @error="handleCoverError(item)" />
+                  <common-cover-image v-if="!coverErrorSet.has(getCoverKey(item))" :music-info="item" :size="appSetting['list.coverSize']" :alt="item.name" @error="handleCoverError(item)" />
                   <svg v-else version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" width="60%" height="60%" viewBox="0 0 24 24" space="preserve">
                     <use xlink:href="#icon-music" />
                   </svg>
@@ -83,7 +83,7 @@
               >
                 <div class="list-item-cell no-select num" style="flex: 0 0 5%;" @click.stop>{{ index + 1 }}</div>
                 <div class="list-item-cell no-select" :class="$style.cover" style="flex: 0 0 calc(var(--list-cover-size) + 12px); padding: 0 6px;">
-                  <common-cover-image v-if="getCover(item) && !coverErrorSet.has(getCoverKey(item))" :src="getCover(item)" :size="appSetting['list.coverSize']" :alt="item.name" @error="handleCoverError(item)" />
+                  <common-cover-image v-if="!coverErrorSet.has(getCoverKey(item))" :music-info="item" :size="appSetting['list.coverSize']" :alt="item.name" @error="handleCoverError(item)" />
                   <svg v-else version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" width="60%" height="60%" viewBox="0 0 24 24" space="preserve">
                     <use xlink:href="#icon-music" />
                   </svg>
@@ -142,7 +142,7 @@
     <common-download-modal v-model:show="isShowDownload" :music-info="selectedDownloadMusicInfo" teleport="#view" />
     <common-download-multiple-modal v-model:show="isShowDownloadMultiple" :list="selectedList" teleport="#view" @confirm="removeAllSelect" />
     <base-menu v-model="isShowItemMenu" :menus="menus" :xy="menuLocation" item-name="name" @menu-click="handleMenuClick" />
-  </div>
+  </common-list-loading>
 </template>
 
 <script>
@@ -151,7 +151,7 @@ import { assertApiSupport } from '@renderer/store/utils'
 import { reactive, ref } from '@common/utils/vueTools'
 import { qualityList } from '@renderer/store'
 import { getMaxQuality } from '@renderer/core/music/utils'
-import { getCachedCoverUrl, prefetchCover, getCoverKey } from '@renderer/utils/musicCover'
+import { getCoverKey } from '@renderer/utils/musicCover'
 import useList from './useList'
 import useMenu from './useMenu'
 import usePlay from './usePlay'
@@ -316,12 +316,6 @@ export default {
     const handleCoverError = (item) => {
       coverErrorSet.add(getCoverKey(item))
     }
-    const getCover = (item) => {
-      const cached = getCachedCoverUrl(item)
-      if (cached) return cached
-      prefetchCover(item)
-      return ''
-    }
     const qualityBadgeLabel = (item) => {
       const maxQ = getMaxQuality(item, qualityList.value[item.source] || [])
       switch (maxQ) {
@@ -370,7 +364,6 @@ export default {
       appSetting,
       hasQuality,
       qualityBadgeLabel,
-      getCover,
       getCoverKey,
       coverErrorSet,
       handleCoverError,

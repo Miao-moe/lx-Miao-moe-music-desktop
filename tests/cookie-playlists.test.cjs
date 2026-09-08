@@ -34,9 +34,7 @@ function fixture({ sources = Object.keys(cookies), respond, sdk = {} } = {}) {
   const requests = []
   const writes = []
   const actions = Object.fromEntries(['createUserList', 'overwriteListMusics', 'updateUserList'].map(name => [name, async(data) => { writes.push({ name, data }) }]))
-  const sync = load('src/renderer/utils/cookieSync.ts', {
-    '@renderer/store/list/action': actions,
-    '@renderer/store/list/listManage/state': { userLists: [] },
+  const api = load('src/renderer/utils/cookiePlaylistApi.ts', {
     '@renderer/utils/cookieManager': manager,
     '@renderer/utils': { deduplicationList: items => items, toNewMusicInfo: item => item },
     '@renderer/utils/musicSdk': sdk,
@@ -48,6 +46,13 @@ function fixture({ sources = Object.keys(cookies), respond, sdk = {} } = {}) {
         return { promise: Promise.resolve().then(() => respond(url, options)) }
       },
     },
+  })
+  const sync = load('src/renderer/utils/cookieSync.ts', {
+    '@renderer/store/list/action': actions,
+    '@renderer/store/list/listManage/state': { userLists: [] },
+    './cookieManager': manager,
+    './cookiePlaylistApi': api,
+    './playlistWriteback': { refreshBoundPlaylist: async(_id, read, apply) => apply(await read()) },
   })
   return { sync, manager, requests, writes, appSetting }
 }

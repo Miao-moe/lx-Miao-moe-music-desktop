@@ -3,7 +3,7 @@
     <div :class="$style.header">
       <base-tab v-model="activeTab" :class="$style.tab" :list="tabs" />
     </div>
-    <div :class="$style.content">
+    <common-list-loading :load-key="list" :loading="isLoading" :class="$style.content">
       <div class="thead" :class="$style.thead">
         <table>
           <thead>
@@ -38,7 +38,7 @@
               </transition>
             </div>
             <div class="list-item-cell no-select" :class="$style.cover" style="flex: 0 0 calc(var(--list-cover-size) + 12px); padding: 0 6px;">
-              <common-cover-image v-if="getCover(item) && !coverErrorSet.has(getCoverKey(item))" :src="getCover(item)" :size="appSetting['list.coverSize']" alt="" @error="handleCoverError(item)" />
+              <common-cover-image v-if="!coverErrorSet.has(getCoverKey(item))" :music-info="item.metadata.musicInfo" :size="appSetting['list.coverSize']" alt="" @error="handleCoverError(item)" />
               <svg v-else version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" width="60%" height="60%" viewBox="0 0 24 24" space="preserve">
                 <use xlink:href="#icon-music" />
               </svg>
@@ -61,12 +61,13 @@
           </div>
         </base-virtualized-list>
       </div>
-      <div v-else :class="[$style.noItem, 'ui-state']" role="status">
-        <p v-text="$t('no_item')" />
+      <div v-else :class="[$style.noItem, 'ui-state', { 'ui-state-error': loadError }]" role="status">
+        <p>{{ $t(loadError ? 'list__load_failed' : 'no_item') }}</p>
+        <base-btn v-if="loadError" class="ui-state-retry" min @click="loadList">{{ $t('reload') }}</base-btn>
       </div>
       <base-menu v-model="isShowItemMenu" :menus="menus" :xy="menuLocation" item-name="name" @menu-click="handleMenuClick" />
       <!-- <base-menu :menus="listItemMenu" :location="listMenu.menuLocation" item-name="name" :is-show="listMenu.isShowItemMenu" @menu-click="handleListItemMenuClick" /> -->
-    </div>
+    </common-list-loading>
     <common-list-add-modal v-model:show="isShowListAdd" :music-info="selectedAddMusicInfo" teleport="#view" />
     <common-list-add-multiple-modal v-model:show="isShowListAddMultiple" :music-list="selectedList" teleport="#view" @confirm="removeAllSelect" />
   </div>
@@ -87,7 +88,6 @@ import { downloadStatus } from '@renderer/store/download/state'
 import { appSetting } from '@renderer/store/setting'
 import { isPlay } from '@renderer/store/player/state'
 import { formatMusicName } from '@renderer/utils'
-import { getCachedCoverUrl, prefetchCover } from '@renderer/utils/musicCover'
 
 export default {
   name: 'Download',
@@ -100,6 +100,9 @@ export default {
       dom_listContent,
       listAll,
       list,
+      isLoading,
+      loadError,
+      loadList,
       playTaskId,
     } = useListInfo(activeTab)
 
@@ -212,14 +215,6 @@ export default {
 
     const coverErrorSet = reactive(new Set())
     const getCoverKey = (item) => `${item.metadata.musicInfo.source}__${item.metadata.musicInfo.id}`
-    const getCover = (item) => {
-      const musicInfo = item.metadata.musicInfo
-      if (musicInfo.img || musicInfo.meta?.picUrl) return musicInfo.img || musicInfo.meta?.picUrl
-      const cached = getCachedCoverUrl(musicInfo)
-      if (cached) return cached
-      prefetchCover(musicInfo)
-      return ''
-    }
     const handleCoverError = (item) => {
       coverErrorSet.add(getCoverKey(item))
     }
@@ -272,7 +267,9 @@ export default {
       getTypeName,
       isPlay,
       appSetting,
-      getCover,
+      isLoading,
+      loadError,
+      loadList,
       getCoverKey,
       coverErrorSet,
       handleCoverError,

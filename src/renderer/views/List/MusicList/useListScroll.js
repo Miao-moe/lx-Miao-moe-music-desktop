@@ -19,7 +19,9 @@ export default ({ props, listRef, list, handleRestoreScroll }) => {
     // console.log(index, isAnimation)
     if (!list.value.length) return
     if (index == null) {
-      let location = await getListPosition(props.listId) || 0
+      const id = props.listId
+      let location = await getListPosition(id) || 0
+      if (id !== props.listId) return
       if (appSetting['list.isSaveScrollLocation'] && location != null) {
         listRef.value?.scrollTo(location)
       }

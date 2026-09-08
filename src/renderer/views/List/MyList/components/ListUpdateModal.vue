@@ -15,8 +15,30 @@
               />
               <span :class="$style.label" style="vertical-align: text-top;">{{ listUpdateTimes[list.id] }}</span>
             </div>
+            <div :class="$style.writeback">
+              <base-checkbox
+                :id="`list_writeback_${list.id}`" controlled :model-value="writebackStatus[list.id]?.enabled === true"
+                :disabled="!isWritebackSupported(list) || changing[list.id] === true || fetchingListStatus[list.id]"
+                :class="$style.checkbox" :label="$t('list_writeback__enable')" @change="handleWriteback(list, $event)"
+              />
+              <span v-if="!isWritebackSupported(list)" :class="$style.status">{{ $t('list_writeback__unsupported') }}</span>
+              <span v-else-if="changing[list.id]" :class="$style.status" role="status">{{ $t('list_writeback__checking') }}</span>
+              <span v-else-if="writebackStatus[list.id]?.enabled" :class="$style.status" role="status">
+                {{ $t(`list_writeback__${writebackStatus[list.id].state}`) }}
+                <span v-if="writebackStatus[list.id].ignored"> · {{ $t('list_writeback__ignored', { count: writebackStatus[list.id].ignored }) }}</span>
+              </span>
+            </div>
+            <p v-if="errors[list.id] || writebackStatus[list.id]?.error" :class="$style.error" role="status">
+              {{ $t(`list_writeback__error_${errors[list.id] || writebackStatus[list.id].error}`) }}
+            </p>
+            <p v-if="writebackStatus[list.id]?.enabled" :class="$style.status">
+              {{ $t(`list_writeback__scope_${list.source}`) }}
+            </p>
           </div>
           <div :class="$style.btns">
+            <base-btn v-if="writebackStatus[list.id]?.enabled" min :disabled="writebackStatus[list.id].state === 'syncing' || changing[list.id]" @click="handleRetry(list)">
+              {{ $t('list_writeback__retry') }}
+            </base-btn>
             <button :class="$style.btn" :disabled="fetchingListStatus[list.id]" outline="outline" :aria-label="$t('list_update_modal__update')" @click.stop="handleUpdate(list)">
               <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" style="transform: rotate(45deg);" viewBox="0 0 24 24" space="preserve">
                 <use xlink:href="#icon-refresh" />
@@ -31,17 +53,19 @@
     </main>
     <div :class="$style.footer">
       <div :class="$style.tips">{{ $t('list_update_modal__tips') }}</div>
+      <div :class="$style.tips">{{ $t('list_writeback__tips') }}</div>
     </div>
   </material-modal>
 </template>
 
 <script>
-import { computed, ref } from '@common/utils/vueTools'
+import { computed, ref, reactive } from '@common/utils/vueTools'
 import { userLists, fetchingListStatus, listUpdateTimes } from '@renderer/store/list/state'
 import handleSyncSourceList from '@renderer/store/list/syncSourceList'
 import musicSdk from '@renderer/utils/musicSdk'
 // import { dateFormat } from '@common/utils/renderer'
 import { getListUpdateInfo, setListAutoUpdate } from '@renderer/utils/data'
+import { isWritebackSupported, setPlaylistWriteback, retryPlaylistWriteback, writebackStatus, WritebackError } from '@renderer/utils/playlistWriteback'
 
 export default {
   props: {
@@ -54,6 +78,8 @@ export default {
   setup() {
     const lists = computed(() => userLists.filter(l => !!l.source && !!musicSdk[l.source]?.songList))
     const updateInfo = ref({})
+    const changing = reactive({})
+    const errors = reactive({})
     // const updateTimes = ref({})
 
     void getListUpdateInfo().then((listUpdateInfo) => {
@@ -71,9 +97,25 @@ export default {
       // listUpdateTimes._inited = true
     })
 
-    const handleUpdate = (targetListInfo) => {
-      void handleSyncSourceList(targetListInfo)
-      // console.log(targetListInfo.list.length, list.length)
+    const handleUpdate = async(targetListInfo) => {
+      errors[targetListInfo.id] = undefined
+      try { await handleSyncSourceList(targetListInfo) } catch (error) {
+        errors[targetListInfo.id] = error instanceof WritebackError ? error.code : 'failed'
+      }
+    }
+    const handleWriteback = async(list, enabled) => {
+      if (changing[list.id]) return
+      changing[list.id] = true
+      errors[list.id] = undefined
+      try { await setPlaylistWriteback(list.id, enabled) } catch (error) {
+        errors[list.id] = error instanceof WritebackError ? error.code : 'failed'
+      } finally { changing[list.id] = false }
+    }
+    const handleRetry = async(list) => {
+      errors[list.id] = undefined
+      try { await retryPlaylistWriteback(list.id) } catch {
+        errors[list.id] = 'storage'
+      }
     }
 
     const handleChangeAutoUpdate = (list, enable) => {
@@ -87,6 +129,12 @@ export default {
       handleUpdate,
       handleChangeAutoUpdate,
       listUpdateTimes,
+      changing,
+      errors,
+      writebackStatus,
+      isWritebackSupported,
+      handleWriteback,
+      handleRetry,
     }
   },
 }
@@ -95,7 +143,7 @@ export default {
 <style lang="less" module>
 @import '@renderer/assets/styles/layout.less';
 
-@width: 460px;
+@width: min(620px, calc(100vw - 80px));
 
 .header {
   flex: none;
@@ -175,6 +223,22 @@ export default {
   padding: 0 5px;
   display: flex;
   align-items: center;
+  gap: 5px;
+}
+.writeback {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+}
+.status, .error {
+  margin-top: 5px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-font-label);
+}
+.error {
+  color: var(--color-primary);
 }
 .btn {
   background-color: transparent;

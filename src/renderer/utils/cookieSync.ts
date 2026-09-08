@@ -1,336 +1,14 @@
 import { createUserList, overwriteListMusics, updateUserList } from '@renderer/store/list/action'
 import { userLists } from '@renderer/store/list/listManage/state'
-import {
-  COOKIE_SOURCES,
-  SOURCE_NAME,
-  getCookie,
-  getCookieValue,
-  hasCookie,
-  isCookieRecognized,
-  isFavListSyncEnabled,
-  type CookieSource,
-} from '@renderer/utils/cookieManager'
-import { deduplicationList, toNewMusicInfo } from '@renderer/utils'
-import musicSdk from '@renderer/utils/musicSdk'
-import { linuxapi } from '@renderer/utils/musicSdk/wy/utils/crypto'
-import { toMD5 } from '@renderer/utils/musicSdk/utils'
-import { httpFetch } from '@renderer/utils/request'
-
-interface FetchResponse {
-  body: any
-  statusCode: number
-  headers?: Record<string, any>
-}
-
-const fetchResponse = async(url: string, options: Record<string, any> = { method: 'get' }): Promise<FetchResponse> => {
-  const response: FetchResponse = await (httpFetch(url, options) as any).promise
-  if (response.statusCode < 200 || response.statusCode >= 300) throw new Error(`cookie api: HTTP ${response.statusCode}`)
-  return response
-}
-
-export interface CookiePlaylistCheck {
-  source: CookieSource
-  status: 'success' | 'missing_cookie' | 'invalid_cookie' | 'login_expired' | 'failed'
-  listCount: number
-}
-
-export interface CookieSyncDetail {
-  source: CookieSource
-  status: 'success' | 'failed'
-  listCount: number
-  count: number
-}
-
-export interface CookieSyncResult {
-  synced: boolean
-  listCount: number
-  count: number
-  message?: string
-  error?: boolean
-  details?: CookieSyncDetail[]
-}
-
-export interface RemotePlaylist {
-  id: string
-  name: string
-  raw?: any
-}
-
-const SYNC_LIST_ID_PREFIX = 'userlist_'
+import { COOKIE_SOURCES, SOURCE_NAME, getCookie, hasCookie, isCookieRecognized, isFavListSyncEnabled, type CookieSource } from './cookieManager'
+import { getRemotePlaylists, getRemoteSongs, type RemotePlaylist, type CookieSyncResult, type CookieSyncDetail } from './cookiePlaylistApi'
+import { refreshBoundPlaylist } from './playlistWriteback'
+export { checkCookiePlaylists } from './cookiePlaylistApi'
+export type { RemotePlaylist, CookieSyncResult, CookieSyncDetail, CookiePlaylistCheck } from './cookiePlaylistApi'
 
 let syncTask: Promise<CookieSyncResult> | null = null
-
-const buildSyncListId = (source: CookieSource, remoteId: string) => `${SYNC_LIST_ID_PREFIX}${source}_sync_${remoteId}`
-
-const findSyncedList = (source: CookieSource, remoteId: string) => {
-  return userLists.find(list => list.id === buildSyncListId(source, remoteId))
-}
-
-const wyLinuxForward = async(cookie: string, api: string, params: Record<string, any>) => {
-  const { statusCode, body } = await fetchResponse('https://music.163.com/api/linux/forward', {
-    method: 'post',
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.90 Safari/537.36',
-      Cookie: cookie,
-    },
-    form: linuxapi({ method: 'POST', url: `https://music.163.com${api}`, params }),
-  })
-  if (statusCode !== 200 || body?.code !== 200) throw new Error(`wy api: ${api} failed (${body?.code ?? statusCode})`)
-  return body
-}
-
-const getWyPlaylists = async(cookie: string): Promise<RemotePlaylist[]> => {
-  const account = await wyLinuxForward(cookie, '/api/w/nuser/account/get', {})
-  const uid = account?.account?.id ?? account?.profile?.userId
-  if (!uid) throw new Error('wy cookie: login expired')
-  const body = await wyLinuxForward(cookie, '/api/user/playlist', { uid: String(uid), limit: 1000, offset: 0 })
-  if (!Array.isArray(body?.playlist)) throw new Error('wy: failed to load playlists')
-  return body.playlist
-    .filter((item: any) => String(item?.creator?.userId) === String(uid))
-    .map((item: any) => ({ id: String(item.id), name: String(item.name ?? '未命名歌单').trim() }))
-    .filter((item: RemotePlaylist) => item.id && item.name)
-}
-
-const getWySongs = async(cookie: string, id: string): Promise<LX.Music.MusicInfo[]> => {
-  const body = await wyLinuxForward(cookie, '/api/v3/playlist/detail', { id, n: 100000, s: 8 })
-  if (!body?.playlist?.tracks) throw new Error('wy: failed to load playlist songs')
-  return deduplicationList(musicSdk.wy.songList.filterListDetail(body).map(toNewMusicInfo))
-}
-
-const getTxPlaylists = async(cookie: string): Promise<RemotePlaylist[]> => {
-  const uin = (getCookieValue(cookie, 'uin') ?? getCookieValue(cookie, 'wxuin') ?? '').match(/\d+/)?.[0]
-  if (!uin) throw new Error('tx cookie: missing uin')
-  const url = `https://c.y.qq.com/rsc/fcgi-bin/fcg_user_created_diss?cv=4747474&ct=24&format=json&inCharset=utf-8&outCharset=utf-8&notice=0&platform=yqq.json&needNewCode=1&uin=${uin}&hostuin=${uin}&sin=0&size=1000&ein=1000`
-  const { body } = await fetchResponse(url, {
-    headers: { Cookie: cookie, Origin: 'https://y.qq.com', Referer: 'https://y.qq.com/' },
-  })
-  const playlists = body?.data?.disslist
-  if (body?.code !== 0 || !Array.isArray(playlists)) throw new Error('tx: failed to load playlists')
-  return playlists
-    .map((item: any) => ({ id: String(item.tid ?? item.dissid ?? ''), name: String(item.diss_name ?? item.title ?? '').trim() }))
-    .filter((item: RemotePlaylist) => item.id && item.name)
-}
-
-const getTxSongs = async(cookie: string, id: string): Promise<LX.Music.MusicInfo[]> => {
-  const { body } = await fetchResponse(musicSdk.tx.songList.getListDetailUrl(id), {
-    headers: { Cookie: cookie, Origin: 'https://y.qq.com', Referer: `https://y.qq.com/n/ryqq/playlist/${id}` },
-  })
-  const songs = body?.cdlist?.[0]?.songlist
-  if (body?.code !== 0 || !Array.isArray(songs)) throw new Error('tx: failed to load playlist songs')
-  return deduplicationList(musicSdk.tx.songList.filterListDetail(songs).map(toNewMusicInfo))
-}
-
-const getKwPlaylists = async(cookie: string): Promise<RemotePlaylist[]> => {
-  const uid = (getCookieValue(cookie, 'userid') ?? '').match(/\d+/)?.[0]
-  if (!uid) throw new Error('kw cookie: missing userid')
-  const { body } = await fetchResponse(`https://nplserver.kuwo.cn/pl.svc?op=getlistbyuid&uid=${encodeURIComponent(uid)}&bigid=1&encode=utf8`)
-  if (body?.result !== 'ok' || !Array.isArray(body.plist)) throw new Error('kw: failed to load playlists')
-  return body.plist
-    .filter((item: any) => String(item.uid) === uid && item.type === 'GENERAL')
-    .map((item: any) => ({ id: String(item.id), name: String(item.title ?? '').trim() }))
-    .filter((item: RemotePlaylist) => item.id && item.name)
-}
-
-const KG_APPID = 1005
-const KG_CLIENTVER = 20489
-const KG_SIGN_SALT = 'OIlwieks28dk2k092lksi2UIkp'
-
-interface KugouAuth { userid: string, token: string, mid: string, dfid: string }
-
-const getKugouAuth = (cookie: string): KugouAuth => {
-  const encoded = getCookieValue(cookie, 'KuGoo')
-  if (!encoded) throw new Error('kg cookie: missing KuGoo')
-  let value = encoded
-  try { value = decodeURIComponent(value) } catch {}
-  const account = new URLSearchParams(value.replace(/^"|"$/g, ''))
-  const userid = account.get('KugooID') ?? account.get('KugouID') ?? ''
-  const token = account.get('t') ?? ''
-  if (!userid || !token) throw new Error('kg cookie: incomplete credentials')
-  return {
-    userid,
-    token,
-    mid: getCookieValue(cookie, 'kg_mid') ?? '-',
-    dfid: getCookieValue(cookie, 'kg_dfid') ?? '-',
-  }
-}
-
-const requestKugou = async(path: string, router: string, data: Record<string, any>, auth: KugouAuth) => {
-  const clienttime = Math.floor(Date.now() / 1000)
-  const params: Record<string, string | number> = {
-    dfid: auth.dfid,
-    mid: auth.mid,
-    uuid: '-',
-    appid: KG_APPID,
-    clientver: KG_CLIENTVER,
-    clienttime,
-    plat: 1,
-    userid: auth.userid,
-    token: auth.token,
-  }
-  const bodyText = JSON.stringify(data)
-  const signText = Object.keys(params).sort().map(k => `${k}=${params[k]}`).join('')
-  const signature = toMD5(`${KG_SIGN_SALT}${signText}${bodyText}${KG_SIGN_SALT}`)
-  const query = new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)]))
-  query.set('signature', signature)
-
-  const { body } = await fetchResponse(`https://gateway.kugou.com${path}?${query.toString()}`, {
-    method: 'post',
-    body: bodyText,
-    headers: {
-      'content-type': 'application/json',
-      'user-agent': 'Android15-1070-11083-46-0-DiscoveryDRADProtocol-wifi',
-      'x-router': router,
-      dfid: auth.dfid,
-      mid: auth.mid,
-      clienttime: String(clienttime),
-      'kg-rc': '1',
-      'kg-thash': '5d816a0',
-      'kg-rec': '1',
-      'kg-rf': 'B9EDA08A64250DEFFBCADDEE00F8F25F',
-    },
-  })
-  if (body?.status !== 1 || body?.error_code !== 0) throw new Error(`kg api error: ${body?.error_code ?? 'unknown'}`)
-  return body.data
-}
-
-const getKgPlaylists = async(cookie: string): Promise<RemotePlaylist[]> => {
-  const auth = getKugouAuth(cookie)
-  const result: RemotePlaylist[] = []
-  const ids = new Set<string>()
-  let page = 1
-  let loaded = 0
-  let total = Number.POSITIVE_INFINITY
-  while (loaded < total && page <= 100) {
-    const data = await requestKugou('/v7/get_all_list', 'cloudlist.service.kugou.com', {
-      userid: auth.userid,
-      token: auth.token,
-      total_ver: 979,
-      type: 2,
-      page,
-      pagesize: 30,
-    }, auth)
-    if (!Array.isArray(data?.info)) throw new Error('kg: failed to load playlists')
-    const list = data.info
-    total = Number(data?.list_count ?? list.length)
-    loaded += list.length
-    for (const item of list) {
-      if (Number(item.type) !== 0 || Number(item.is_def) !== 0) continue
-      const id = String(item.listid ?? '')
-      if (!id || ids.has(id)) continue
-      ids.add(id)
-      result.push({ id, name: String(item.name ?? '').trim() })
-    }
-    if (!list.length) break
-    page++
-  }
-  return result.filter(item => item.id && item.name)
-}
-
-const getKgSongs = async(cookie: string, id: string): Promise<LX.Music.MusicInfo[]> => {
-  const auth = getKugouAuth(cookie)
-  const songs: any[] = []
-  let page = 1
-  let total = Number.POSITIVE_INFINITY
-  while (songs.length < total && page <= 1000) {
-    const data = await requestKugou('/v4/get_list_all_file', 'cloudlist.service.kugou.com', {
-      listid: id,
-      userid: auth.userid,
-      token: auth.token,
-      area_code: 1,
-      show_relate_goods: 0,
-      pagesize: 30,
-      page,
-      allplatform: 1,
-      show_cover: 1,
-      type: 0,
-    }, auth)
-    if (!Array.isArray(data?.info)) throw new Error('kg: failed to load playlist songs')
-    const list = data.info
-    total = Number(data?.count ?? list.length)
-    if (!list.length) break
-    songs.push(...list.map((song: any) => ({ ...song, hash: song.hash ?? song.FileHash })))
-    page++
-  }
-  const infos = await musicSdk.kg.songList.getMusicInfos(songs)
-  return deduplicationList(infos.map(toNewMusicInfo))
-}
-
-const parseMiguPlaylists = (body: any): RemotePlaylist[] => {
-  const list = body?.data?.myCreatedMusicLists?.createdMusicLists ?? body?.myCreatedMusicLists?.createdMusicLists
-  if (!Array.isArray(list)) throw new Error('mg: failed to load playlists')
-  return list
-    .map((item: any) => ({ id: String(item.musicListId ?? item.id ?? ''), name: String(item.title ?? item.name ?? '').trim() }))
-    .filter((item: RemotePlaylist) => item.id && item.name)
-}
-
-const getMgPlaylists = async(cookie: string, captured?: RemotePlaylist[]): Promise<RemotePlaylist[]> => {
-  if (captured) return captured
-  const { body } = await fetchResponse('https://c.musicapp.migu.cn/pc/user/home-page/v2.0', {
-    headers: {
-      Cookie: cookie,
-      Origin: 'https://music.migu.cn',
-      Referer: 'https://music.migu.cn/v5/',
-      platform: 'H5',
-      ua: 'Android_migu',
-      version: '6.8.8',
-      IMEI: 'h5page',
-      IMSI: 'h5page',
-    },
-  })
-  return parseMiguPlaylists(body)
-}
-
-const getPagedSdkSongs = async(source: 'kw' | 'mg', id: string): Promise<LX.Music.MusicInfo[]> => {
-  const items: any[] = []
-  let page = 1
-  let total = Number.POSITIVE_INFINITY
-  while (items.length < total && page <= 1000) {
-    const result = await musicSdk[source].songList.getListDetail(id, page)
-    if (!Array.isArray(result?.list)) throw new Error(`${source}: failed to load playlist songs`)
-    const list = result.list
-    total = Number(result?.total ?? list.length)
-    items.push(...list)
-    if (!list.length || items.length >= total) break
-    page++
-  }
-  return deduplicationList(items.map(toNewMusicInfo))
-}
-
-const getRemotePlaylists = async(source: CookieSource, cookie: string, captured?: RemotePlaylist[]): Promise<RemotePlaylist[]> => {
-  switch (source) {
-    case 'wy': return getWyPlaylists(cookie)
-    case 'tx': return getTxPlaylists(cookie)
-    case 'kg': return getKgPlaylists(cookie)
-    case 'kw': return getKwPlaylists(cookie)
-    case 'mg': return getMgPlaylists(cookie, captured)
-  }
-}
-
-// Check access without importing, overwriting or removing any local playlists.
-export const checkCookiePlaylists = async(source: CookieSource): Promise<CookiePlaylistCheck> => {
-  const cookie = getCookie(source)
-  if (!cookie.trim()) return { source, status: 'missing_cookie', listCount: 0 }
-  if (!isCookieRecognized(source, cookie)) return { source, status: 'invalid_cookie', listCount: 0 }
-  try {
-    const playlists = await getRemotePlaylists(source, cookie)
-    return { source, status: 'success', listCount: playlists.length }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : ''
-    const status = message.includes('login expired') ? 'login_expired' : 'failed'
-    return { source, status, listCount: 0 }
-  }
-}
-
-const getRemoteSongs = async(source: CookieSource, cookie: string, playlist: RemotePlaylist): Promise<LX.Music.MusicInfo[]> => {
-  switch (source) {
-    case 'wy': return getWySongs(cookie, playlist.id)
-    case 'tx': return getTxSongs(cookie, playlist.id)
-    case 'kg': return getKgSongs(cookie, playlist.id)
-    case 'kw': return getPagedSdkSongs('kw', playlist.id)
-    case 'mg': return getPagedSdkSongs('mg', playlist.id)
-  }
-}
-
+const buildSyncListId = (source: CookieSource, remoteId: string) => `userlist_${source}_sync_${remoteId}`
+const findSyncedList = (source: CookieSource, remoteId: string) => userLists.find(list => list.id === buildSyncListId(source, remoteId))
 const syncOnePlaylist = async(source: CookieSource, playlist: RemotePlaylist, songs: LX.Music.MusicInfo[]) => {
   const validSongs = songs.filter(s => s?.id)
   const id = buildSyncListId(source, playlist.id)
@@ -338,11 +16,11 @@ const syncOnePlaylist = async(source: CookieSource, playlist: RemotePlaylist, so
   const localList = findSyncedList(source, playlist.id)
   if (localList) {
     if (localList.name !== name || localList.source !== source || localList.sourceListId !== playlist.id) {
-      await updateUserList([{ ...localList, name, source, sourceListId: playlist.id }])
+      await updateUserList([{ ...localList, name, source, sourceListId: playlist.id }], true)
     }
-    await overwriteListMusics({ listId: id, musicInfos: validSongs })
+    await overwriteListMusics({ listId: id, musicInfos: validSongs }, true)
   } else {
-    await createUserList({ id, name, source, sourceListId: playlist.id, list: validSongs })
+    await createUserList({ id, name, source, sourceListId: playlist.id, list: validSongs }, true)
   }
 }
 
@@ -353,8 +31,11 @@ const syncSource = async(source: CookieSource, cookie: string, captured?: Remote
   let failed = 0
   for (const playlist of playlists) {
     try {
-      const songs = await getRemoteSongs(source, cookie, playlist)
-      await syncOnePlaylist(source, playlist, songs)
+      let songs: LX.Music.MusicInfo[] = []
+      await refreshBoundPlaylist(buildSyncListId(source, playlist.id), async() => getRemoteSongs(source, cookie, playlist), async result => {
+        songs = result
+        await syncOnePlaylist(source, playlist, songs)
+      })
       listCount++
       count += songs.length
     } catch (err) {

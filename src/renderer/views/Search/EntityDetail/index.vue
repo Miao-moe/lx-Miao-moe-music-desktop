@@ -1,8 +1,8 @@
 <template>
-  <div :class="$style.container">
+  <common-list-loading :load-key="entityDetailInfo.list" :loading="profileLoading" :class="$style.container">
     <header :class="$style.header">
       <div :class="[$style.cover, { [$style.singerCover]: type == 'singer' }]">
-        <img v-if="coverUrl && !coverError" :src="coverUrl" :alt="entityDetailInfo.info.name" @error="coverError = true">
+        <common-cover-image v-if="coverUrl && !coverError" :src="coverUrl" :size="96" :alt="entityDetailInfo.info.name" @error="coverError = true" />
         <svg v-else version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" viewBox="0 0 24 24" space="preserve">
           <use xlink:href="#icon-music" />
         </svg>
@@ -33,7 +33,7 @@
         @retry="handleRetry"
       />
     </div>
-  </div>
+  </common-list-loading>
 </template>
 
 <script setup lang="ts">
@@ -53,6 +53,9 @@ const route = useRoute()
 const router = useRouter()
 const listRef = ref<any>(null)
 const coverError = ref(false)
+const profileLoading = ref(false)
+let loadGeneration = 0
+let profileRequest: { key: string, promise: Promise<void> } | undefined
 
 const getQueryString = (value: unknown) => Array.isArray(value) ? String(value[0] ?? '') : typeof value == 'string' ? value : ''
 const routeType = computed(() => getQueryString(route.query.type))
@@ -138,7 +141,19 @@ const handlePlayList = (index: number) => {
 }
 
 const loadEntityDetail = async(currentType: EntityType, currentId: string, currentSource: LX.OnlineSource, currentPage: number, currentSummary: EntitySummary) => {
-  await getAndSetEntityDetail(currentType, currentId, currentSource, currentPage, currentSummary).catch(() => {})
+  const current = ++loadGeneration
+  profileLoading.value = true
+  const profileKey = `${currentType}__${currentSource}__${currentId}`
+  // Paging while the profile is pending still waits for that same cover lookup.
+  if (profileRequest?.key !== profileKey) {
+    profileRequest = { key: profileKey, promise: getAndSetEntityProfile(currentType, currentId, currentSource, currentSummary) }
+  }
+  await Promise.allSettled([
+    getAndSetEntityDetail(currentType, currentId, currentSource, currentPage, currentSummary),
+    profileRequest.promise,
+  ])
+  if (current !== loadGeneration) return
+  profileLoading.value = false
   await nextTick()
   listRef.value?.scrollToTop()
 }
@@ -157,7 +172,6 @@ watch([routeType, type, source, id, page, summary], async([currentRouteType, cur
     return
   }
   await loadEntityDetail(currentType, currentId, currentSource, currentPage, currentSummary)
-  void getAndSetEntityProfile(currentType, currentId, currentSource as LX.OnlineSource, currentSummary)
 }, { immediate: true })
 
 useKeyBack(handleBack)

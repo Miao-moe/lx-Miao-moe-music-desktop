@@ -3,6 +3,12 @@ import { setFetchingListStatus, overwriteListMusics, setUpdateTime } from './act
 import { getListDetailAll } from '@renderer/store/songList/action'
 import { getListDetailAll as getBoardListAll } from '@renderer/store/leaderboard/action'
 import { dateFormat } from '@common/utils/common'
+import { refreshBoundPlaylist, WritebackError } from '@renderer/utils/playlistWriteback'
+import { dialog } from '@renderer/plugins/Dialog'
+
+export const showSyncError = (error: unknown) => {
+  void dialog({ message: window.i18n.t(`list_writeback__error_${error instanceof WritebackError ? error.code : 'failed'}`) })
+}
 
 const fetchList = async(id: string, source: LX.OnlineSource, sourceListId: string) => {
   setFetchingListStatus(id, true)
@@ -22,9 +28,9 @@ const fetchList = async(id: string, source: LX.OnlineSource, sourceListId: strin
 export default async(targetListInfo: LX.List.UserListInfo) => {
   // console.log(targetListInfo)
   if (!targetListInfo.source || !targetListInfo.sourceListId) return
-  const list = await fetchList(targetListInfo.id, targetListInfo.source, targetListInfo.sourceListId)
-  // console.log(list)
-  void overwriteListMusics({ listId: targetListInfo.id, musicInfos: list })
+  await refreshBoundPlaylist(targetListInfo.id, async() => fetchList(targetListInfo.id, targetListInfo.source!, targetListInfo.sourceListId!), async list => {
+    await overwriteListMusics({ listId: targetListInfo.id, musicInfos: list }, true)
+  })
   const now = Date.now()
   void setListUpdateTime(targetListInfo.id, now)
   setUpdateTime(targetListInfo.id, dateFormat(now))

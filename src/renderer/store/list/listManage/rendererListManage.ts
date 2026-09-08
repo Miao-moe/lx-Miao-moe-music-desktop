@@ -17,7 +17,8 @@ import {
   setUserLists,
   listMusicClear,
 } from './action'
-import { allMusicList } from './state'
+import { allMusicList, userLists } from './state'
+import { withLocalListLocks } from '../localMutationLock'
 
 const pendingLists = new Map<string, Promise<LX.Music.MusicInfo[]>>()
 let listRevision = 0
@@ -45,16 +46,18 @@ export const createUserList = async(data: LX.List.ListActionAdd) => {
  * @param data
  */
 export const removeUserList = async(data: LX.List.ListActionRemove) => {
-  await rendererInvoke<LX.List.ListActionRemove>(PLAYER_EVENT_NAME.list_remove, data)
+  await withLocalListLocks(data, async() => rendererInvoke<LX.List.ListActionRemove>(PLAYER_EVENT_NAME.list_remove, data))
 }
 
 /**
  * 更新用户列表
  * @param data
  */
-export const updateUserList = async(data: LX.List.ListActionUpdate) => {
+export const updateUserList = async(data: LX.List.ListActionUpdate, fromRefresh = false) => {
   data = data.map(info => toRaw(info))
-  await rendererInvoke<LX.List.ListActionUpdate>(PLAYER_EVENT_NAME.list_update, data)
+  const commit = async() => rendererInvoke<LX.List.ListActionUpdate>(PLAYER_EVENT_NAME.list_update, data)
+  if (fromRefresh) await commit()
+  else await withLocalListLocks(data.map(list => list.id), commit)
 }
 
 /**
@@ -98,8 +101,10 @@ export const getListMusics = async(listId: string | null): Promise<LX.Music.Musi
  * 批量添加歌曲到列表
  * @param data
  */
-export const addListMusics = async(data: LX.List.ListActionMusicAdd) => {
-  await rendererInvoke<LX.List.ListActionMusicAdd>(PLAYER_EVENT_NAME.list_music_add, data)
+export const addListMusics = async(data: LX.List.ListActionMusicAdd, fromRefresh = false) => {
+  const commit = async() => rendererInvoke<LX.List.ListActionMusicAdd>(PLAYER_EVENT_NAME.list_music_add, data)
+  if (fromRefresh) await commit()
+  else await withLocalListLocks([data.id], commit)
 }
 
 /**
@@ -107,7 +112,7 @@ export const addListMusics = async(data: LX.List.ListActionMusicAdd) => {
  * @param data
  */
 export const moveListMusics = async(data: LX.List.ListActionMusicMove) => {
-  await rendererInvoke<LX.List.ListActionMusicMove>(PLAYER_EVENT_NAME.list_music_move, data)
+  await withLocalListLocks([data.fromId, data.toId], async() => rendererInvoke<LX.List.ListActionMusicMove>(PLAYER_EVENT_NAME.list_music_move, data))
 }
 
 /**
@@ -115,7 +120,7 @@ export const moveListMusics = async(data: LX.List.ListActionMusicMove) => {
  * @param data
  */
 export const removeListMusics = async(data: LX.List.ListActionMusicRemove) => {
-  await rendererInvoke<LX.List.ListActionMusicRemove>(PLAYER_EVENT_NAME.list_music_remove, data)
+  await withLocalListLocks([data.listId], async() => rendererInvoke<LX.List.ListActionMusicRemove>(PLAYER_EVENT_NAME.list_music_remove, data))
 }
 
 /**
@@ -123,7 +128,7 @@ export const removeListMusics = async(data: LX.List.ListActionMusicRemove) => {
  * @param data
  */
 export const updateListMusics = async(data: LX.List.ListActionMusicUpdate) => {
-  await rendererInvoke<LX.List.ListActionMusicUpdate>(PLAYER_EVENT_NAME.list_music_update, data)
+  await withLocalListLocks([...allMusicList.keys()], async() => rendererInvoke<LX.List.ListActionMusicUpdate>(PLAYER_EVENT_NAME.list_music_update, data))
 }
 
 /**
@@ -131,15 +136,32 @@ export const updateListMusics = async(data: LX.List.ListActionMusicUpdate) => {
  * @param data
  */
 export const updateListMusicsPosition = async(data: LX.List.ListActionMusicUpdatePosition) => {
-  await rendererInvoke<LX.List.ListActionMusicUpdatePosition>(PLAYER_EVENT_NAME.list_music_update_position, data)
+  await withLocalListLocks([data.listId], async() => rendererInvoke<LX.List.ListActionMusicUpdatePosition>(PLAYER_EVENT_NAME.list_music_update_position, data))
 }
 
 /**
  * 覆盖列表内的歌曲
  * @param data
  */
-export const overwriteListMusics = async(data: LX.List.ListActionMusicOverwrite) => {
-  await rendererInvoke<LX.List.ListActionMusicOverwrite>(PLAYER_EVENT_NAME.list_music_overwrite, data)
+export const overwriteListMusics = async(data: LX.List.ListActionMusicOverwrite, fromRefresh = false) => {
+  const commit = async() => rendererInvoke<LX.List.ListActionMusicOverwrite>(PLAYER_EVENT_NAME.list_music_overwrite, data)
+  if (fromRefresh) await commit()
+  else await withLocalListLocks([data.listId], commit)
+}
+
+// Replace at the current position with one SQLite transaction, keeping the original on failure.
+export const replaceListMusic = async(listId: string, oldId: string, musicInfo: LX.Music.MusicInfo, allowDuplicate = false): Promise<'replaced' | 'missing' | 'duplicate'> => {
+  return withLocalListLocks([listId], async() => {
+    const current = await getListMusics(listId)
+    const index = current.findIndex(song => song.id === oldId)
+    if (index < 0) return 'missing'
+    if (!allowDuplicate && current.some(song => song.id === musicInfo.id)) return 'duplicate'
+    const position = current.slice(0, index).filter(song => song.id !== musicInfo.id).length
+    const musicInfos = current.filter(song => song.id !== oldId && song.id !== musicInfo.id).map(song => toRaw(song))
+    musicInfos.splice(position, 0, toRaw(musicInfo))
+    await rendererInvoke<LX.List.ListActionMusicOverwrite>(PLAYER_EVENT_NAME.list_music_overwrite, { listId, musicInfos })
+    return 'replaced'
+  })
 }
 
 /**
@@ -147,7 +169,7 @@ export const overwriteListMusics = async(data: LX.List.ListActionMusicOverwrite)
  * @param ids
  */
 export const clearListMusics = async(ids: LX.List.ListActionMusicClear) => {
-  await rendererInvoke<LX.List.ListActionMusicClear>(PLAYER_EVENT_NAME.list_music_clear, ids)
+  await withLocalListLocks(ids, async() => rendererInvoke<LX.List.ListActionMusicClear>(PLAYER_EVENT_NAME.list_music_clear, ids))
 }
 
 /**
@@ -167,7 +189,9 @@ export const overwriteListFull = async(data: LX.List.ListActionDataOverwrite) =>
     }
   })
 
-  await rendererInvoke<LX.List.ListActionDataOverwrite>(PLAYER_EVENT_NAME.list_data_overwire, data)
+  await withLocalListLocks([...allMusicList.keys(), ...userLists.map(list => list.id), ...data.userList.map(list => list.id)], async() => {
+    await rendererInvoke<LX.List.ListActionDataOverwrite>(PLAYER_EVENT_NAME.list_data_overwire, data)
+  })
 }
 
 /**
@@ -191,11 +215,12 @@ export const getMusicExistListIds = async(musicInfoId: string): Promise<string[]
 const noop = () => {}
 
 
-export const registerListAction = (appSetting: LX.AppSetting, onListChanged: (listIds: string[]) => void = noop) => {
+export const registerListAction = (appSetting: LX.AppSetting, onListChanged: (listIds: string[], reset?: boolean) => void = noop) => {
   const list_data_overwrite = ({ params: datas }: LX.IpcRendererEventParams<LX.List.ListActionDataOverwrite>) => {
     listRevision++
+    const previousIds = userLists.map(list => list.id)
     const updatedListIds = listDataOverwrite(datas)
-    if (updatedListIds.length) onListChanged(updatedListIds)
+    onListChanged([...new Set([...previousIds, ...datas.userList.map(list => list.id), ...updatedListIds])], true)
   }
   const list_create = ({ params: { position, listInfos } }: LX.IpcRendererEventParams<LX.List.ListActionAdd>) => {
     for (const list of listInfos) {
@@ -204,11 +229,12 @@ export const registerListAction = (appSetting: LX.AppSetting, onListChanged: (li
   }
   const list_remove = ({ params: ids }: LX.IpcRendererEventParams<LX.List.ListActionRemove>) => {
     listRevision++
-    const updatedListIds = userListsRemove(ids)
-    if (updatedListIds.length) onListChanged(updatedListIds)
+    userListsRemove(ids)
+    onListChanged(ids, true)
   }
   const list_update = ({ params: listInfos }: LX.IpcRendererEventParams<LX.List.ListActionUpdate>) => {
     userListsUpdate(listInfos)
+    onListChanged(listInfos.map(list => list.id))
   }
   const list_update_position = ({ params: { position, ids } }: LX.IpcRendererEventParams<LX.List.ListActionUpdatePosition>) => {
     userListsUpdatePosition(position, ids)

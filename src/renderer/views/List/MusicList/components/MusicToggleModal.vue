@@ -2,9 +2,10 @@
   <material-modal :show="show" teleport="#view" bg-close height="100%" @close="handleClose">
     <main :class="$style.main">
       <base-tab v-model="source" :class="$style.tab" :list="tabs" />
+      <base-checkbox id="music_toggle_only_matches" v-model="onlyMatches" :class="$style.filter" :label="$t('music_toggle_only_matches')" />
       <div class="scroll" :class="$style.list">
         <template v-if="list.length">
-          <div v-for="item in list" :key="item.id" :class="$style.listItem">
+          <div v-for="item in list" :key="item.id" :class="[$style.listItem, {[$style.selected]: toggleMusicInfo?.id === item.id}]">
             <!-- <div :class="$style.num">{{ index + 1 }}</div> -->
             <div :class="$style.textContent">
               <h3 :class="$style.text" :aria-label="`${item.name} - ${item.singer}`">{{ item.name }}</h3>
@@ -15,10 +16,10 @@
             </div>
             <div :class="$style.label">{{ item.interval }}</div>
             <div :class="$style.btns">
-              <button type="button" :class="$style.btn" @click="openDetail(item)">
+              <button type="button" :class="$style.btn" :aria-label="$t('music_toggle_detail', { name: item.name })" @click="openDetail(item)">
                 <svg-icon name="share" />
               </button>
-              <button type="button" :class="$style.btn" @click="handlePlay(item)">
+              <button type="button" :class="$style.btn" :aria-label="$t('music_toggle_preview', { name: item.name })" :aria-pressed="toggleMusicInfo?.id === item.id" @click="handlePlay(item)">
                 <svg v-once version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" height="50%" viewBox="0 0 287.386 287.386" space="preserve">
                   <use xlink:href="#icon-testPlay" />
                 </svg>
@@ -48,7 +49,7 @@
             <h2>
               <div :class="$style.nameLabel">
                 <span :class="$style.name">{{ toggleMusicInfo.name }}</span>
-                <span :class="$style.label">{{ toggleMusicInfo.source }} {{ musicInfo.interval }}</span>
+                <span :class="$style.label">{{ toggleMusicInfo.source }} {{ toggleMusicInfo.interval }}</span>
               </div>
               <div :class="$style.singer">
                 {{ toggleMusicInfo.singer }}
@@ -66,13 +67,14 @@
 <script>
 import { LIST_IDS } from '@common/constants'
 import { openUrl } from '@common/utils/electron'
-import { playNext } from '@renderer/core/player'
+import { playQueueById } from '@renderer/core/player'
 import { getSourceI18nPrefix } from '@renderer/store'
 import { addTempPlayList } from '@renderer/store/player/action'
 import { playMusicInfo } from '@renderer/store/player/state'
 import { toNewMusicInfo, toOldMusicInfo } from '@renderer/utils'
 import musicSdk from '@renderer/utils/musicSdk'
 import { markRaw } from 'vue'
+import { rankMusicToggleCandidates } from '@renderer/utils/musicToggleCandidates'
 
 export default {
   props: {
@@ -90,26 +92,44 @@ export default {
   emits: ['update:show', 'toggle'],
   data() {
     return {
-      tabs: [],
       lists: {},
       source: '',
       isError: false,
       loading: false,
       searchKey: 0,
       toggleMusicInfo: null,
+      onlyMatches: true,
     }
   },
   computed: {
+    rankedLists() {
+      return rankMusicToggleCandidates(this.musicInfo, Object.entries(this.lists).map(([source, list]) => ({ source, list })), this.onlyMatches)
+    },
+    tabs() {
+      const prefix = getSourceI18nPrefix()
+      return this.rankedLists.map(item => ({ id: item.source, label: window.i18n.t(prefix + item.source) }))
+    },
     list() {
-      return this.lists[this.source] ?? []
+      return this.rankedLists.find(item => item.source === this.source)?.list ?? []
     },
     noItemLabel() {
-      return this.loading ? this.$t('list__loading') : this.isError ? this.$t('list__load_failed') : this.$t('no_item')
+      return this.loading ? this.$t('list__loading') : this.isError ? this.$t('list__load_failed') : this.$t(this.onlyMatches ? 'music_toggle_no_match' : 'no_item')
     },
   },
   watch: {
     show(n) {
       if (n) this.loadList()
+      else this.cancelSearch()
+    },
+    musicInfo() {
+      if (this.show) this.loadList()
+    },
+    source() {
+      this.toggleMusicInfo = null
+    },
+    onlyMatches() {
+      this.toggleMusicInfo = null
+      this.source = this.rankedLists[0]?.source ?? ''
     },
   },
   methods: {
@@ -117,7 +137,7 @@ export default {
       this.isError = false
       this.toggleMusicInfo = null
       const musicInfo = this.musicInfo
-      this.tabs = []
+      this.source = ''
       this.lists = {}
       this.loading = true
       const searchKey = this.searchKey = Math.random()
@@ -129,15 +149,8 @@ export default {
         interval: musicInfo.interval ?? '',
       }).then((lists) => {
         if (this.searchKey != searchKey) return
-        const prefix = getSourceI18nPrefix()
-        this.tabs = lists.map(item => {
-          return {
-            id: item.source,
-            label: window.i18n.t(prefix + item.source),
-          }
-        })
-        if (lists.length) this.source = lists[0].source
         for (const s of lists) this.lists[s.source] = s.list.map(s => markRaw(toNewMusicInfo(s)))
+        this.source = this.rankedLists[0]?.source ?? ''
       }).catch(() => {
         if (this.searchKey != searchKey) return
         this.isError = true
@@ -147,9 +160,16 @@ export default {
       })
     },
     handleClose() {
+      this.cancelSearch()
       this.$emit('update:show', false)
     },
+    cancelSearch() {
+      this.searchKey = Math.random()
+      this.loading = false
+      this.toggleMusicInfo = null
+    },
     handleConfirm() {
+      if (!this.show || !this.toggleMusicInfo || this.toggleMusicInfo.id === this.musicInfo.id || !this.list.some(item => item.id === this.toggleMusicInfo.id)) return
       this.$emit('toggle', this.toggleMusicInfo)
     },
     openDetail(minfo) {
@@ -158,10 +178,11 @@ export default {
       void openUrl(url)
     },
     handlePlay(musicInfo) {
+      if (!this.show || !this.list.some(item => item.id === musicInfo.id)) return
       this.toggleMusicInfo = musicInfo
       const isPlaying = !!playMusicInfo.musicInfo
-      addTempPlayList([{ listId: LIST_IDS.PLAY_LATER, musicInfo, isTop: true }])
-      if (isPlaying) void playNext()
+      const index = addTempPlayList([{ listId: LIST_IDS.PLAY_LATER, musicInfo, isTop: true }])
+      if (isPlaying) playQueueById(index)
     },
   },
 }
@@ -186,6 +207,11 @@ export default {
 }
 .tab {
   flex: none;
+}
+.filter {
+  flex: none;
+  margin: 10px 15px 0;
+  font-size: 13px;
 }
 
 .list {
@@ -212,6 +238,10 @@ export default {
 
     &:hover {
       background-color: var(--color-primary-background-hover);
+    }
+    &.selected {
+      background-color: var(--color-primary-alpha-100);
+      box-shadow: inset 3px 0 var(--color-primary);
     }
     // &:last-child {
     //   border-bottom-left-radius: 4px;

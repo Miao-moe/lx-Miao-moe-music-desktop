@@ -12,7 +12,7 @@ import {
 import { toRaw } from '@common/utils/vueTools'
 import { LIST_IDS } from '@common/constants'
 
-export const registerAction = (onListChanged: (listIds: string[]) => void) => {
+export const registerAction = (onListChanged: (listIds: string[], reset?: boolean) => void) => {
   return registerListAction(appSetting, onListChanged)
 }
 
@@ -59,7 +59,7 @@ export const createUserList = async({ name, id = `userlist_${Date.now()}`, list 
   source?: LX.OnlineSource
   sourceListId?: string
   position?: number
-}) => {
+}, fromRefresh = false) => {
   await createUserListAction({
     position: position < 0 ? userLists.length : position,
     listInfos: [
@@ -72,7 +72,7 @@ export const createUserList = async({ name, id = `userlist_${Date.now()}`, list 
       },
     ],
   })
-  if (list) await addListMusics(id, list)
+  if (list) await addListMusicsAction({ id, musicInfos: toRaw(list), addMusicLocationType: appSetting['list.addMusicLocationType'] }, fromRefresh)
 }
 
 

@@ -40,10 +40,12 @@ export const toNewMusicInfo = (oldMusicInfo: any): LX.Music.MusicInfo => {
       case 'tx':
         meta.strMediaMid = oldMusicInfo.strMediaMid
         meta.id = oldMusicInfo.songId
+        meta.songType = oldMusicInfo.songType
         meta.albumMid = oldMusicInfo.albumMid
         break
       case 'mg':
         meta.copyrightId = oldMusicInfo.copyrightId
+        meta.contentId = oldMusicInfo.contentId
         meta.lrcUrl = oldMusicInfo.lrcUrl
         meta.mrcUrl = oldMusicInfo.mrcUrl
         meta.trcUrl = oldMusicInfo.trcUrl
@@ -84,9 +86,11 @@ export const toOldMusicInfo = (minfo: LX.Music.MusicInfo) => {
         oInfo.strMediaMid = minfo.meta.strMediaMid
         oInfo.albumMid = minfo.meta.albumMid
         oInfo.songId = minfo.meta.id
+        oInfo.songType = minfo.meta.songType
         break
       case 'mg':
         oInfo.copyrightId = minfo.meta.copyrightId
+        oInfo.contentId = minfo.meta.contentId
         oInfo.lrcUrl = minfo.meta.lrcUrl
         oInfo.mrcUrl = minfo.meta.mrcUrl
         oInfo.trcUrl = minfo.meta.trcUrl

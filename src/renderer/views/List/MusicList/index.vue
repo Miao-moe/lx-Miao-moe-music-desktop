@@ -1,5 +1,5 @@
 <template>
-  <div :class="$style.list" :style="{ '--list-cover-size': `${appSetting['list.coverSize']}px` }">
+  <common-list-loading :load-key="list" :loading="isLoading" :class="$style.list" :style="{ '--list-cover-size': `${appSetting['list.coverSize']}px` }">
     <div class="thead">
       <table :class="$style.headerTable">
         <thead>
@@ -42,7 +42,7 @@
             </transition>
           </div>
           <div class="list-item-cell no-select" :class="$style.cover" style="flex: 0 0 calc(var(--list-cover-size) + 12px); padding: 0 6px;">
-            <common-cover-image v-if="getCover(item) && !coverErrorSet.has(getCoverKey(item))" :src="getCover(item)" :size="appSetting['list.coverSize']" alt="" @error="handleCoverError(item)" />
+            <common-cover-image v-if="!coverErrorSet.has(getCoverKey(item))" :music-info="item" :size="appSetting['list.coverSize']" alt="" @error="handleCoverError(item)" />
             <svg v-else version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" width="60%" height="60%" viewBox="0 0 24 24" space="preserve">
               <use xlink:href="#icon-music" />
             </svg>
@@ -94,7 +94,7 @@
             </transition>
           </div>
           <div class="list-item-cell no-select" :class="$style.cover" style="flex: 0 0 calc(var(--list-cover-size) + 12px); padding: 0 6px;">
-            <common-cover-image v-if="getCover(item) && !coverErrorSet.has(getCoverKey(item))" :src="getCover(item)" :size="appSetting['list.coverSize']" alt="" @error="handleCoverError(item)" />
+            <common-cover-image v-if="!coverErrorSet.has(getCoverKey(item))" :music-info="item" :size="appSetting['list.coverSize']" alt="" @error="handleCoverError(item)" />
             <svg v-else version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" width="60%" height="60%" viewBox="0 0 24 24" space="preserve">
               <use xlink:href="#icon-music" />
             </svg>
@@ -125,8 +125,9 @@
         </div>
       </base-virtualized-list>
     </div>
-    <div v-show="!list.length" :class="[$style.noItem, 'ui-state']" role="status">
-      <p v-text="$t('no_item')" />
+    <div v-show="!list.length" :class="[$style.noItem, 'ui-state', { 'ui-state-error': loadError }]" role="status">
+      <p>{{ $t(loadError ? 'list__load_failed' : 'no_item') }}</p>
+      <base-btn v-if="loadError" class="ui-state-retry" min @click="retryList">{{ $t('reload') }}</base-btn>
     </div>
     <common-list-add-modal
       v-model:show="isShowListAdd" :is-move="isMove" :from-list-id="listId"
@@ -142,14 +143,14 @@
     <music-sort-modal v-model:show="isShowMusicSortModal" :music-info="selectedSortMusicInfo" :selected-num="selectedNum" @confirm="sortMusic" />
     <music-toggle-modal v-model:show="isShowMusicToggleModal" :music-info="selectedToggleMusicInfo" @toggle="toggleSource" />
     <base-menu v-model="isShowItemMenu" :menus="menus" :xy="menuLocation" item-name="name" @menu-click="handleMenuClick" />
-  </div>
+  </common-list-loading>
 </template>
 
 <script>
 import { reactive } from '@common/utils/vueTools'
 import { clipboardWriteText } from '@common/utils/electron'
 import { assertApiSupport } from '@renderer/store/utils'
-import { getCachedCoverUrl, prefetchCover, getCoverKey } from '@renderer/utils/musicCover'
+import { getCoverKey } from '@renderer/utils/musicCover'
 import SearchList from './components/SearchList.vue'
 import MusicSortModal from './components/MusicSortModal.vue'
 import MusicToggleModal from './components/MusicToggleModal.vue'
@@ -192,20 +193,14 @@ export default {
       if (isAnimation) void restoreScroll(scrollIndex, isAnimation)
       // console.log('handleRestoreScroll', scrollIndex, isAnimation)
     }
-    const onLoadedList = () => {
+    const onLoadedList = async() => {
       // console.log('restoreScroll', scrollIndex, isAnimation)
-      void restoreScroll(scrollIndex, isAnimation)
+      return restoreScroll(scrollIndex, isAnimation)
     }
 
     const coverErrorSet = reactive(new Set())
     const handleCoverError = (item) => {
       coverErrorSet.add(getCoverKey(item))
-    }
-    const getCover = (item) => {
-      const cached = getCachedCoverUrl(item)
-      if (cached) return cached
-      prefetchCover(item)
-      return ''
     }
 
     const {
@@ -214,6 +209,9 @@ export default {
       dom_listContent,
       listRef,
       list,
+      isLoading,
+      loadError,
+      retryList,
       playerInfo,
       setSelectedIndex,
       isShowSource,
@@ -421,7 +419,9 @@ export default {
       toggleSource,
 
       handleCoverError,
-      getCover,
+      isLoading,
+      loadError,
+      retryList,
       getCoverKey,
       coverErrorSet,
       canOpenEntity,

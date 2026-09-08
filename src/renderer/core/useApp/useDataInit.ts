@@ -12,6 +12,7 @@ import { playMusicInfo } from '@renderer/store/player/state'
 import { initDislikeInfo, registerRemoteDislikeAction } from '@renderer/core/dislikeList'
 import { syncCookieListsOnStartup } from '@renderer/utils/cookieSync'
 import { getListPrevSelectId } from '@renderer/utils/data'
+import { initPlaylistWriteback, startPlaylistWriteback, disposePlaylistWriteback, notifyPlaylistChanged } from '@renderer/utils/playlistWriteback'
 
 const initPrevPlayInfo = async() => {
   const info = await getPlayInfo()
@@ -38,17 +39,23 @@ export default () => {
   let unregisterDislikeEvent: null | (() => void) = null
 
   onBeforeUnmount(() => {
+    disposePlaylistWriteback()
+    window.removeEventListener('online', resumeWriteback)
     if (unregister) unregister()
     if (unregisterDislikeEvent) unregisterDislikeEvent()
   })
 
+  const resumeWriteback = () => { void startPlaylistWriteback().catch(err => { log.error(err) }) }
+
   return async() => {
-    unregister = registerAction((ids) => {
+    unregister = registerAction((ids, reset) => {
       window.app_event.myListUpdate(ids)
+      notifyPlaylistChanged(ids, reset)
     })
     // Local playlists can render while custom APIs are still initializing.
     const initLocalLists = async() => {
       window.lxData.userLists = await getUserLists()
+      await initPlaylistWriteback()
       const previousId = await getListPrevSelectId()
       await getListMusics(previousId)
     }
@@ -59,6 +66,8 @@ export default () => {
       log.error(err)
     })
     void music.init() // 初始化音乐sdk
+    resumeWriteback()
+    window.addEventListener('online', resumeWriteback)
     unregisterDislikeEvent = registerRemoteDislikeAction()
     await initDislikeInfo() // 获取不喜欢列表
     await initPrevPlayInfo().catch(err => {

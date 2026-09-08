@@ -64,6 +64,7 @@ declare namespace LX {
     }
 
     interface MusicInfoMeta_tx extends MusicInfoMeta_online {
+      songType?: number
       strMediaMid: string // 歌曲strMediaMid
       id?: number // 歌曲songId
       albumMid?: string // 歌曲albumMid
@@ -73,6 +74,7 @@ declare namespace LX {
     }
 
     interface MusicInfoMeta_mg extends MusicInfoMeta_online {
+      contentId?: string
       copyrightId: string // 歌曲copyrightId
       lrcUrl?: string // 歌曲lrcUrl
       mrcUrl?: string // 歌曲mrcUrl

@@ -15,25 +15,40 @@ export default ({ props, onLoadedList }) => {
 
 
   const list = shallowRef([])
+  const isLoading = ref(false)
+  const loadError = ref(false)
   let generation = 0
   const loadList = (restoreScroll) => {
     const id = props.listId
     const current = ++generation
+    isLoading.value = true
+    loadError.value = false
     const apply = songs => {
       if (current !== generation || id !== props.listId) return
       list.value = [...songs]
       if (restoreScroll) {
         // A warm cache is available during setup, before the scroll helpers mount.
-        nextTick(() => {
-          if (current === generation && id === props.listId) onLoadedList()
+        nextTick(async() => {
+          try {
+            if (current === generation && id === props.listId) await onLoadedList()
+          } catch (error) {
+            console.error('Restore local playlist position failed', error)
+          } finally {
+            if (current === generation) isLoading.value = false
+          }
         })
-      }
+      } else isLoading.value = false
     }
     const cached = allMusicList.get(id)
     if (cached) apply(cached) // Includes an intentionally empty playlist.
     else {
       list.value = []
-      getListMusics(id).then(apply).catch(error => { console.error('Load local playlist failed', error) })
+      getListMusics(id).then(apply).catch(error => {
+        if (current !== generation) return
+        console.error('Load local playlist failed', error)
+        isLoading.value = false
+        loadError.value = true
+      })
     }
   }
   watch(() => props.listId, () => { loadList(true) }, { immediate: true })
@@ -68,6 +83,9 @@ export default ({ props, onLoadedList }) => {
     dom_listContent,
     listRef,
     list,
+    isLoading,
+    loadError,
+    retryList: () => { loadList(true) },
     playerInfo,
     setSelectedIndex,
     isShowSource,

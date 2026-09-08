@@ -10,9 +10,21 @@ export default (activeTab) => {
   const dom_listContent = ref(null)
 
   const listAll = ref([])
-  getDownloadList().then(l => {
-    listAll.value = l
-  })
+  const isLoading = ref(true)
+  const loadError = ref(false)
+  const loadList = async() => {
+    isLoading.value = true
+    loadError.value = false
+    try {
+      listAll.value = await getDownloadList()
+    } catch (error) {
+      console.error('Load download list failed', error)
+      loadError.value = true
+    } finally {
+      isLoading.value = false
+    }
+  }
+  loadList()
 
   const list = computed(() => {
     switch (activeTab.value) {
@@ -37,6 +49,9 @@ export default (activeTab) => {
     dom_listContent,
     listAll,
     list,
+    isLoading,
+    loadError,
+    loadList,
     playTaskId,
   }
 }
