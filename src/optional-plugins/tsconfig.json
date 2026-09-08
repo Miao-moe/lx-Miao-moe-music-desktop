@@ -9,5 +9,6 @@
     },
     "typeRoots": ["../renderer/types", "../renderer-lyric/types"]
   },
-  "include": ["./**/*.ts", "./**/*.js", "./**/*.vue", "../common/types/**/*.d.ts", "../renderer/types/**/*.d.ts"]
+  "include": ["./**/*.ts", "./**/*.js", "./**/*.vue", "../common/types/**/*.d.ts", "../renderer/types/**/*.d.ts"],
+  "exclude": ["./folia-lyrics/engine"]
 }

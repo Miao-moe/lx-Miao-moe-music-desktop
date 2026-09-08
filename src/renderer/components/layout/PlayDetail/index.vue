@@ -8,7 +8,8 @@
     <AmbientBackground v-if="visibled" :cover="musicInfo.pic" />
     <ControlBtnsLeftHeader v-if="appSetting['common.controlBtnPosition'] == 'left'" data-detail-part="chrome" />
     <ControlBtnsRightHeader v-else data-detail-part="chrome" />
-    <div :class="[$style.main, {[$style.showComment]: isShowPlayComment}]">
+    <component :is="pluginPlayDetail" v-if="visibled && pluginPlayDetail && !isShowPlayComment && !isShowLrcSelectContent" :class="$style.main" data-detail-part="lyrics" />
+    <div v-else :class="[$style.main, {[$style.showComment]: isShowPlayComment}]">
       <div class="left" :class="$style.left">
         <div :class="$style.info">
           <img
@@ -26,19 +27,21 @@
       <music-comment v-if="visibled" :class="$style.comment" :show="isShowPlayComment" :music-info="playMusicInfo.musicInfo" @close="hideComment" />
     </div>
     <play-bar v-if="visibled" data-detail-part="controls" />
-    <common-audio-visualizer v-if="appSetting['player.audioVisualization'] && visibled" />
+    <common-audio-visualizer v-if="appSetting['player.audioVisualization'] && visibled && !pluginPlayDetail" />
   </div>
 </template>
 
 
 <script>
-import { watch } from '@common/utils/vueTools'
+import { computed, watch } from '@common/utils/vueTools'
+import { pluginRuntime } from '@renderer/store/optionalPlugins'
 import usePlayerDetailMotion from '@renderer/utils/compositions/usePlayerDetailMotion'
 import AmbientBackground from './AmbientBackground.vue'
 import { isFullscreen } from '@renderer/store'
 import {
   isShowPlayerDetail,
   isShowPlayComment,
+  isShowLrcSelectContent,
   musicInfo,
   playMusicInfo,
 } from '@renderer/store/player/state'
@@ -67,6 +70,7 @@ export default {
     MusicComment,
   },
   setup() {
+    const pluginPlayDetail = computed(() => Object.values(pluginRuntime.playDetails).find(detail => detail?.enabled.value)?.component)
     let clickTime = 0
 
     const hide = () => {
@@ -107,6 +111,8 @@ export default {
       appSetting,
       playMusicInfo,
       isShowPlayerDetail,
+      isShowLrcSelectContent,
+      pluginPlayDetail,
       isShowPlayComment,
       musicInfo,
       hide,

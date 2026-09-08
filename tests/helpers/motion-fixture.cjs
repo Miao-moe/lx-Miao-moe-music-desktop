@@ -6,7 +6,7 @@ const { _electron } = require('playwright-core')
 
 const project = path.resolve(__dirname, '../..')
 
-async function launch({ record = false, profilePath, initializeMotion = true, reducedMotion = 'no-preference', rendererPath = process.env.LX_TEST_RENDERER_PATH, args = [] } = {}) {
+async function launch({ record = false, profilePath, initializeMotion = true, reducedMotion = 'no-preference', rendererPath = process.env.LX_TEST_RENDERER_PATH, disableHardwareAcceleration = true, args = [] } = {}) {
   const output = profilePath ?? await fs.mkdtemp(path.join(os.tmpdir(), 'lx-motion-check-'))
   await fs.mkdir(path.join(output, 'portable'), { recursive: true })
   const wrapper = path.join(output, 'wrapper.cjs')
@@ -25,7 +25,7 @@ require(${JSON.stringify(path.join(project, 'dist/main.js'))});`)
   delete env.ELECTRON_RUN_AS_NODE
   const app = await _electron.launch({
     executablePath: require('electron'),
-    args: [wrapper, '-hidden', '-dha', ...args],
+    args: [wrapper, '-hidden', ...(disableHardwareAcceleration ? ['-dha'] : []), ...args],
     env,
     ...(record ? { recordVideo: { dir: path.join(output, 'video'), size: { width: 1114, height: 718 } } } : {}),
   })

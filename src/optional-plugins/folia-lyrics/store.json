@@ -1,0 +1,13 @@
+{
+  "name": {
+    "zh-cn": "Folia 歌词动效",
+    "zh-tw": "Folia 歌詞動效",
+    "en-us": "Folia Lyrics"
+  },
+  "description": {
+    "zh-cn": "为播放详情页加入 Folia 的 13 种歌词样式，支持逐字动效、样式预览与独立开关。",
+    "zh-tw": "為播放詳細頁加入 Folia 的 13 種歌詞樣式，支援逐字動效、樣式預覽與獨立開關。",
+    "en-us": "Add 13 Folia lyric styles to player details, with word animations, live previews and a separate toggle."
+  },
+  "icon": "#icon-lyric"
+}

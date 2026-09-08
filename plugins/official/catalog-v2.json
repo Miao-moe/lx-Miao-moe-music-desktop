@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "plugins": [
+    {
+      "id": "sound-effects",
+      "version": "1.0.0",
+      "apiVersion": 1,
+      "path": "sound-effects/1.0.0/a170f8018bcade0c7084559372e544c968f0c8dc348695090b60570918181daa.lxplugin",
+      "bytes": 2961255,
+      "sha256": "a170f8018bcade0c7084559372e544c968f0c8dc348695090b60570918181daa",
+      "name": {
+        "zh-cn": "音效增强",
+        "zh-tw": "音效增強",
+        "en-us": "Sound Effects"
+      },
+      "description": {
+        "zh-cn": "包含十段均衡器、环境混响、环绕音效和变调，支持保存个人预设。",
+        "zh-tw": "包含十段等化器、環境混響、環繞音效與變調，支援儲存個人預設。",
+        "en-us": "Ten-band equalizer, convolution reverb, surround effects and pitch shifting, with personal presets."
+      },
+      "icon": "#icon-tune-variant"
+    },
+    {
+      "id": "audio-visualizer",
+      "version": "1.2.0",
+      "apiVersion": 1,
+      "path": "audio-visualizer/1.2.0/2b9401a231125732dc6efbaf7e0673945f9a9700a8ac743f6036601199646213.lxplugin",
+      "bytes": 69379,
+      "sha256": "2b9401a231125732dc6efbaf7e0673945f9a9700a8ac743f6036601199646213",
+      "name": {
+        "zh-cn": "音频可视化",
+        "zh-tw": "音訊視覺化",
+        "en-us": "Audio Visualizer"
+      },
+      "description": {
+        "zh-cn": "为播放详情页和桌面歌词添加随音乐变化的频谱，可分别开关。",
+        "zh-tw": "為播放詳細頁與桌面歌詞加入隨音樂變化的頻譜，可分別開關。",
+        "en-us": "Music spectrum for player details and desktop lyrics, with separate display switches."
+      },
+      "icon": "#icon-audio-wave"
+    },
+    {
+      "id": "folia-lyrics",
+      "version": "1.0.0",
+      "apiVersion": 2,
+      "path": "folia-lyrics/1.0.0/af46729c94ac5bb440d03d916b3e7a2397588622634e54ace538237a74188542.lxplugin",
+      "bytes": 10592188,
+      "sha256": "af46729c94ac5bb440d03d916b3e7a2397588622634e54ace538237a74188542",
+      "name": {
+        "zh-cn": "Folia 歌词动效",
+        "zh-tw": "Folia 歌詞動效",
+        "en-us": "Folia Lyrics"
+      },
+      "description": {
+        "zh-cn": "为播放详情页加入 Folia 的 13 种歌词样式，支持逐字动效、样式预览与独立开关。",
+        "zh-tw": "為播放詳細頁加入 Folia 的 13 種歌詞樣式，支援逐字動效、樣式預覽與獨立開關。",
+        "en-us": "Add 13 Folia lyric styles to player details, with word animations, live previews and a separate toggle."
+      },
+      "icon": "#icon-lyric"
+    }
+  ]
+}

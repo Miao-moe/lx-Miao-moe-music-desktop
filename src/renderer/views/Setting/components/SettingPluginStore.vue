@@ -6,32 +6,34 @@
       <base-btn min :disabled="refreshing" @click="refresh">{{ $t(refreshing ? 'setting__plugins_refreshing' : 'setting__plugins_refresh') }}</base-btn>
     </div>
     <p v-if="pluginStore.catalogError || pluginStoreError" :class="$style.notice" role="status">{{ $t('setting__plugins_catalog_error') }}</p>
+    <p v-if="!refreshing && !items.length" :class="$style.notice" role="status">{{ $t('setting__plugins_empty') }}</p>
     <div :class="$style.grid">
       <article v-for="item in items" :key="item.id" :class="$style.card" :data-plugin-id="item.id">
         <div :class="$style.cardHeader">
           <span :class="$style.icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use :xlink:href="item.icon" /></svg></span>
           <div>
-            <h3 :class="$style.title">{{ $t(item.title) }}</h3>
+            <h3 :class="$style.title">{{ item.title }}</h3>
             <p :class="$style.meta">{{ $t('setting__plugins_official') }}<span v-if="item.version"> · v{{ item.version }}</span></p>
           </div>
           <span :class="[$style.badge, {[$style.installed]: item.loaded}]">{{ $t(item.broken ? 'setting__plugins_broken' : item.installed ? 'setting__plugins_installed' : 'setting__plugins_available') }}</span>
         </div>
-        <p :class="$style.description">{{ $t(item.description) }}</p>
+        <p v-if="item.description" :class="$style.description">{{ item.description }}</p>
         <p v-if="item.bytes" :class="$style.meta">{{ (item.bytes / 1024 / 1024).toFixed(2) }} MB</p>
         <p v-if="item.incompatible" :class="$style.notice" role="status">{{ $t('setting__plugins_incompatible') }}</p>
+        <p v-if="item.installed && !item.available" :class="$style.notice" role="status">{{ $t('setting__plugins_removed') }}</p>
         <p v-if="item.broken || pluginOperationErrors[item.id]" :class="$style.notice" role="alert">{{ $t('setting__plugins_operation_error') }}</p>
         <div :class="$style.actions">
           <base-btn v-if="!item.installed || item.update || item.broken" min :disabled="pluginBusy[item.id] || !item.available || item.incompatible" @click="changePluginInstallation(item.id, true)">
             {{ $t(pluginBusy[item.id] ? 'setting__plugins_working' : item.broken ? 'setting__plugins_reinstall' : item.update ? 'setting__plugins_update' : 'setting__plugins_install') }}
           </base-btn>
-          <base-btn v-if="item.loaded" min :disabled="pluginBusy[item.id]" @click="expanded = expanded === item.id ? null : item.id">{{ $t(expanded === item.id ? 'setting__plugins_close_settings' : 'setting__plugins_settings') }}</base-btn>
+          <base-btn v-if="item.hasSettings" min :disabled="pluginBusy[item.id]" @click="expanded = expanded === item.id ? null : item.id">{{ $t(expanded === item.id ? 'setting__plugins_close_settings' : 'setting__plugins_settings') }}</base-btn>
           <base-btn v-if="item.installed" min outline :disabled="pluginBusy[item.id]" @click="uninstall(item.id)">{{ $t(pluginBusy[item.id] ? 'setting__plugins_working' : 'setting__plugins_uninstall') }}</base-btn>
         </div>
       </article>
     </div>
     <p :class="$style.note">{{ $t('setting__plugins_preserve_settings') }}</p>
-    <section v-if="expanded && pluginRuntime.components[expanded]" :class="$style.settings">
-      <h3>{{ $t(expanded === 'sound-effects' ? 'setting__plugins_sound_effects_title' : 'setting__plugins_visualizer_title') }}</h3>
+    <section v-if="expandedItem?.hasSettings" :class="$style.settings">
+      <h3>{{ expandedItem.title }}</h3>
       <common-plugin-slot :plugin="expanded" name="Settings" />
     </section>
   </dd>
@@ -39,30 +41,38 @@
 
 <script setup>
 import { computed, onMounted, ref } from '@common/utils/vueTools'
-import { PLUGIN_API_VERSION } from '@common/optionalPlugins'
+import { isPluginApiSupported, pluginText, comparePluginVersions } from '@common/optionalPlugins'
 import { pluginStore, pluginRuntime, pluginBusy, pluginOperationErrors, pluginStoreError, refreshPlugins, changePluginInstallation } from '@renderer/store/optionalPlugins'
+import { appSetting } from '@renderer/store/setting'
 
 const expanded = ref(null)
 const refreshing = ref(false)
-const definitions = [
-  { id: 'sound-effects', title: 'setting__plugins_sound_effects_title', description: 'setting__plugins_sound_effects_description', icon: '#icon-tune-variant' },
-  { id: 'audio-visualizer', title: 'setting__plugins_visualizer_title', description: 'setting__plugins_visualizer_description', icon: '#icon-audio-wave' },
-]
-const items = computed(() => definitions.map(item => {
-  const installed = pluginStore.value.installed[item.id]
-  const available = pluginStore.value.catalog.find(plugin => plugin.id === item.id)
-  return {
-    ...item,
-    installed: !!installed || !!pluginStore.value.errors[item.id],
-    loaded: !!pluginRuntime.components[item.id],
-    broken: !!pluginStore.value.errors[item.id] || !!pluginRuntime.errors[item.id],
-    available: !!available,
-    version: installed?.manifest.version ?? available?.version,
-    bytes: available?.bytes,
-    update: installed && available && installed.manifest.version !== available.version,
-    incompatible: available && available.apiVersion !== PLUGIN_API_VERSION,
-  }
-}))
+const items = computed(() => {
+  const snapshot = pluginStore.value
+  const catalog = new Map(snapshot.catalog.map(plugin => [plugin.id, plugin]))
+  const ids = new Set([...catalog.keys(), ...Object.keys(snapshot.installed), ...Object.keys(snapshot.errors)])
+  const language = appSetting['common.langId']
+  return [...ids].map(id => {
+    const installed = snapshot.installed[id]
+    const available = catalog.get(id)
+    return {
+      id,
+      title: pluginText(available?.name ?? installed?.manifest.name, language, id),
+      description: pluginText(available?.description ?? installed?.manifest.description, language),
+      icon: available?.icon ?? installed?.manifest.icon ?? '#icon-tune-variant',
+      installed: !!installed || !!snapshot.errors[id],
+      loaded: !!pluginRuntime.components[id],
+      hasSettings: !!pluginRuntime.components[id]?.Settings,
+      broken: !!snapshot.errors[id] || !!pluginRuntime.errors[id],
+      available: !!available,
+      version: installed?.manifest.version ?? available?.version,
+      bytes: available?.bytes,
+      update: installed && available && comparePluginVersions(available.version, installed.manifest.version) > 0,
+      incompatible: available && !isPluginApiSupported(available.apiVersion),
+    }
+  })
+})
+const expandedItem = computed(() => items.value.find(item => item.id === expanded.value))
 const refresh = async() => {
   if (refreshing.value) return
   refreshing.value = true

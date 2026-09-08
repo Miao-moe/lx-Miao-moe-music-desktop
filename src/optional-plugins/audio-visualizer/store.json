@@ -1,0 +1,13 @@
+{
+  "name": {
+    "zh-cn": "音频可视化",
+    "zh-tw": "音訊視覺化",
+    "en-us": "Audio Visualizer"
+  },
+  "description": {
+    "zh-cn": "为播放详情页和桌面歌词添加随音乐变化的频谱，可分别开关。",
+    "zh-tw": "為播放詳細頁與桌面歌詞加入隨音樂變化的頻譜，可分別開關。",
+    "en-us": "Music spectrum for player details and desktop lyrics, with separate display switches."
+  },
+  "icon": "#icon-audio-wave"
+}

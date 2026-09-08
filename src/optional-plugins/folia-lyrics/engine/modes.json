@@ -1,0 +1,67 @@
+[
+  {
+    "id": "cadenza",
+    "renderer": "./vendor/src/components/visualizer/cadenza/VisualizerCadenza",
+    "label": "Mindscape"
+  },
+  {
+    "id": "cappella",
+    "renderer": "./vendor/src/components/visualizer/cappella/VisualizerCappella",
+    "label": "Cappella"
+  },
+  {
+    "id": "claddagh",
+    "renderer": "./vendor/src/components/visualizer/claddagh/VisualizerCladdagh",
+    "label": "Claddagh"
+  },
+  {
+    "id": "classic",
+    "renderer": "./vendor/src/components/visualizer/classic/Visualizer",
+    "label": "Luminous"
+  },
+  {
+    "id": "diorama",
+    "renderer": "./vendor/src/components/visualizer/diorama/VisualizerDiorama",
+    "label": "镜台"
+  },
+  {
+    "id": "fume",
+    "renderer": "./vendor/src/components/visualizer/fume/VisualizerFume",
+    "label": "Fume"
+  },
+  {
+    "id": "monet",
+    "renderer": "./vendor/src/components/visualizer/monet/VisualizerMonet",
+    "label": "Monet"
+  },
+  {
+    "id": "partita",
+    "renderer": "./vendor/src/components/visualizer/partita/VisualizerPartita",
+    "label": "云阶"
+  },
+  {
+    "id": "pendolo",
+    "renderer": "./vendor/src/components/visualizer/pendolo/VisualizerPendolo",
+    "label": "Pendolo"
+  },
+  {
+    "id": "sonnet",
+    "renderer": "./vendor/src/components/visualizer/sonnet/VisualizerSonnet",
+    "label": "商籁"
+  },
+  {
+    "id": "still",
+    "renderer": "./vendor/src/components/visualizer/still/VisualizerStill",
+    "label": "Still"
+  },
+  {
+    "id": "tempera",
+    "renderer": "./vendor/src/components/visualizer/tempera/VisualizerTempera",
+    "label": "Tempera"
+  },
+  {
+    "id": "tilt",
+    "renderer": "./vendor/src/components/visualizer/tilt/VisualizerTilt",
+    "label": "Tilt"
+  }
+]

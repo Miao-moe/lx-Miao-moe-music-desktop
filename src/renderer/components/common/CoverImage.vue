@@ -35,7 +35,7 @@ const load = async() => {
   release = undefined
   displaySrc.value = ''
   if (!visible.value || (!props.src && !props.musicInfo)) return
-  const done = listLoading?.hold()
+  const done = listLoading?.hold('cover')
   // A stalled URL lookup or download must eventually show the placeholder.
   const timeout = setTimeout(() => {
     if (current !== generation) return

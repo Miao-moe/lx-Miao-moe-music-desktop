@@ -22,6 +22,19 @@ dd
     )
     span(style="margin-left: 4px; font-size: 13px;") px
     span(v-if="coverSizeHint" style="margin-left: 8px; color: var(--color-font-label); font-size: 12px;") {{ coverSizeHint }}
+dd
+  h3#list_loading_mode {{ $t('setting__list_loading_mode') }}
+  div(role="radiogroup" aria-labelledby="list_loading_mode")
+    div
+      base-checkbox.gap-left(
+        id="setting_list_loading_mode_together" name="setting_list_loading_mode" need
+        :model-value="appSetting['list.loadingMode']" value="together" :label="$t('setting__list_loading_mode_together')"
+        @update:model-value="updateSetting({'list.loadingMode': $event})")
+    .gap-top
+      base-checkbox.gap-left(
+        id="setting_list_loading_mode_progressive" name="setting_list_loading_mode" need
+        :model-value="appSetting['list.loadingMode']" value="progressive" :label="$t('setting__list_loading_mode_progressive')"
+        @update:model-value="updateSetting({'list.loadingMode': $event})")
 dd(:aria-label="$t('setting__basic_sourcename_title')")
   h3#list_addMusicLocationType {{ $t('setting__list_add_music_location_type') }}
   div

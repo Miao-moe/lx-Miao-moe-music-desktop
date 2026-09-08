@@ -511,6 +511,11 @@ declare global {
       'list.coverSize': number
 
       /**
+       * 列表与封面一起显示，或先显示列表再加载封面
+       */
+      'list.loadingMode': 'together' | 'progressive'
+
+      /**
        * 是否启用下载功能
        */
       'download.enable': boolean

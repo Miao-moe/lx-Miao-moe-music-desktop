@@ -111,6 +111,7 @@ const defaultSetting: LX.AppSetting = {
   'list.addMusicLocationType': 'top',
   'list.actionButtonsVisible': false,
   'list.coverSize': 28,
+  'list.loadingMode': 'together',
 
   'download.enable': false,
   'download.isSavePathGroupByListName': false,

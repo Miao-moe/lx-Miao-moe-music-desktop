@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict')
+const fs = require('node:fs/promises')
 const http = require('node:http')
 const path = require('node:path')
 const { test } = require('node:test')
@@ -16,8 +17,12 @@ const ready = page => page.waitForFunction(() => {
   const groups = [...document.querySelectorAll('#view [data-list-loading]')]
   return groups.length && groups.every(group => group.getAttribute('aria-busy') === 'false')
 })
+const setMode = async(page, mode) => {
+  await page.evaluate(mode => window.lxData.updateSetting({ 'list.loadingMode': mode }), mode)
+  await page.waitForFunction(mode => window.lxData.appSetting['list.loadingMode'] === mode, mode)
+}
 
-test('lists reveal their content only after data and visible artwork are ready', { timeout: 65000 }, async t => {
+test('lists follow the selected loading mode for data and visible artwork', { timeout: 85000 }, async t => {
   const requests = []
   const gates = new Map()
   const block = pathname => {
@@ -178,6 +183,55 @@ test('lists reveal their content only after data and visible artwork are ready',
       assert.equal(await group.getAttribute('aria-busy'), 'false')
     })
 
+    await t.test('progressive mode waits for list data but lets covers appear independently', async() => {
+      await setMode(page, 'progressive')
+      const first = block('/progressive-first.svg'), second = block('/progressive-second.svg')
+      await page.evaluate(() => {
+        window.__motionComponents().find(c => c.type.name === 'MusicList' && 'list' in c.setupState).setupState.isLoading = true
+      })
+      await seedLocal(page, songs('progressive', [`${base}/progressive-first.svg`, `${base}/progressive-second.svg`]))
+      await Promise.all([first.requested, second.requested])
+      await assertPending()
+      await page.evaluate(() => {
+        window.__motionComponents().find(c => c.type.name === 'MusicList' && 'list' in c.setupState).setupState.isLoading = false
+      })
+      await ready(page)
+      assert.equal(await rows.first().isVisible(), true)
+      assert.equal(await rows.nth(1).isVisible(), true)
+      assert.equal(await rows.first().evaluate(row => !!row.closest('[inert]')), false)
+      assert.equal(await rows.locator('[data-cover-image][src]').count(), 0)
+      first.release()
+      await page.waitForFunction(() => document.querySelector('#view [data-cover-image]')?.naturalWidth === 96)
+      assert.equal(await rows.nth(1).locator('[data-cover-image]').getAttribute('src'), null)
+      assert.equal(await group.getAttribute('aria-busy'), 'false')
+      second.release()
+      await page.waitForFunction(() => [...document.querySelectorAll('#view [data-cover-image]')].every(image => image.naturalWidth === 96))
+      await setMode(page, 'together')
+    })
+
+    await t.test('changing mode releases a pending cover wait and applies to subsequent lists', async() => {
+      const old = block('/mode-old.svg')
+      await seedLocal(page, songs('mode-old', [`${base}/mode-old.svg`]))
+      await old.requested
+      await assertPending()
+      await setMode(page, 'progressive')
+      await ready(page)
+      assert.equal(await rows.first().isVisible(), true)
+      assert.equal(await rows.locator('[data-cover-image]').getAttribute('src'), null)
+      await setMode(page, 'together')
+      assert.equal(await rows.first().isVisible(), true, 'changing mode must not hide a list already on screen')
+      const next = block('/mode-next.svg')
+      await seedLocal(page, songs('mode-next', [`${base}/mode-next.svg`]))
+      await next.requested
+      await assertPending()
+      old.release()
+      await page.waitForTimeout(100)
+      await assertPending()
+      next.release()
+      await ready(page)
+      assert.match(await rows.first().innerText(), /mode-next song 0/)
+    })
+
     await t.test('playlist cards wait for visible lazy images without downloading the whole page', async() => {
       await route(page, '/songList/list?source=wy&sortId=recommend')
       await settled(page)
@@ -231,6 +285,27 @@ test('lists reveal their content only after data and visible artwork are ready',
       t.diagnostic('Screenshot: ' + path.join(output, 'list-loading.png'))
     })
 
+    await t.test('progressive detail shows its header and songs while their covers are still loading', async() => {
+      await setMode(page, 'progressive')
+      const header = block('/progressive-header.svg'), song = block('/progressive-online.svg')
+      await page.evaluate(({ base, list }) => {
+        const detail = window.__motionComponents().find(c => 'listDetailInfo' in c.setupState)
+        Object.assign(detail.setupState.listDetailInfo, {
+          key: 'fixture-progressive-detail', list, total: list.length, limit: 30, page: 1, noItemLabel: '',
+          info: { name: 'Progressive online', img: `${base}/progressive-header.svg`, desc: 'Fixture description' },
+        })
+      }, { base, list: songs('progressive-online', [`${base}/progressive-online.svg`]) })
+      await Promise.all([header.requested, song.requested])
+      await ready(page)
+      assert.equal(await rows.first().isVisible(), true)
+      assert.equal(await page.getByText('Progressive online', { exact: true }).isVisible(), true)
+      assert.equal(await page.locator('#view [data-cover-image][src]').count(), 0)
+      header.release()
+      song.release()
+      await page.waitForFunction(() => [...document.querySelectorAll('#view [data-cover-image]')].every(image => image.naturalWidth === 96))
+      await setMode(page, 'together')
+    })
+
     await t.test('artist detail waits for its profile cover as well as its songs', async() => {
       await page.evaluate(port => {
         const http = require('http'), original = http.request
@@ -281,5 +356,57 @@ test('lists reveal their content only after data and visible artwork are ready',
     await app.close()
     server.closeAllConnections()
     await new Promise(resolve => server.close(resolve))
+  }
+})
+
+test('the loading-mode setting is saved through the UI and restored after full restarts', { timeout: 55000 }, async t => {
+  let fixture
+  let profilePath
+  const start = async() => {
+    fixture = await launch({ profilePath, rendererPath: path.resolve('dist/index.html') })
+    profilePath ??= fixture.output
+    await route(fixture.page, '/setting?name=SettingList')
+    await settled(fixture.page)
+  }
+  const close = async() => {
+    assert.deepEqual(fixture.errors, [])
+    await fixture.app.close()
+    fixture = null
+  }
+  const config = async() => JSON.parse(await fs.readFile(path.join(profilePath, 'portable/userData/LxDatas/config_v2.json'), 'utf8')).setting
+  const select = async mode => {
+    await fixture.page.locator(`label[for="setting_list_loading_mode_${mode}"]`).click()
+    await fixture.page.waitForFunction(mode => window.lxData.appSetting['list.loadingMode'] === mode, mode)
+    assert.equal((await config())['list.loadingMode'], mode)
+  }
+  const selected = async mode => {
+    assert.equal(await fixture.page.evaluate(() => window.lxData.appSetting['list.loadingMode']), mode)
+    assert.equal(await fixture.page.locator(`#setting_list_loading_mode_${mode}`).isChecked(), true)
+    assert.equal(await fixture.page.locator('input[name="setting_list_loading_mode"]:checked').count(), 1)
+    assert.equal(await fixture.page.locator('[role="radiogroup"] [role="radio"][aria-checked="true"]').count(), 1)
+  }
+  try {
+    await start()
+    await t.test('fresh settings keep the existing together mode and can select progressive mode', async() => {
+      await selected('together')
+      await select('progressive')
+      await selected('progressive')
+      await fixture.page.screenshot({ path: path.join(profilePath, 'list-loading-setting.png'), animations: 'disabled' })
+      t.diagnostic('Screenshot: ' + path.join(profilePath, 'list-loading-setting.png'))
+    })
+    await close()
+    await start()
+    await t.test('progressive mode survives a restart and can be changed back through the UI', async() => {
+      await selected('progressive')
+      await select('together')
+      await selected('together')
+    })
+    await close()
+    await start()
+    await t.test('the together selection also survives a restart', async() => {
+      await selected('together')
+    })
+  } finally {
+    if (fixture) await fixture.app.close()
   }
 })

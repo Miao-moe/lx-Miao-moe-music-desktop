@@ -9,13 +9,15 @@ const mockGitHub = async(app, offline = false) => {
     global.__pluginOffline = offline
     global.__pluginRequests = []
     global.__pluginCatalogOverride = null
+    global.__pluginPackageOverrides = {}
     const root = 'https://raw.githubusercontent.com/Miao-moe/lx-m_lx-Miao-moe-music-desktop/master/plugins/official/'
     session.fromPartition('persist:win-main').protocol.handle('https', request => {
       if (!request.url.startsWith(root)) return net.fetch(request, { bypassCustomProtocolHandlers: true })
       global.__pluginRequests.push(request.url)
       if (global.__pluginOffline) return new Response('Unavailable', { status: 503 })
       const relative = decodeURIComponent(request.url.slice(root.length))
-      if (relative === 'catalog.json' && global.__pluginCatalogOverride) return new Response(JSON.stringify(global.__pluginCatalogOverride), { headers: { 'content-type': 'application/json' } })
+      if (relative === 'catalog-v2.json' && global.__pluginCatalogOverride) return new Response(JSON.stringify(global.__pluginCatalogOverride), { headers: { 'content-type': 'application/json' } })
+      if (global.__pluginPackageOverrides[relative]) return new Response(Buffer.from(global.__pluginPackageOverrides[relative], 'base64'), { headers: { 'content-type': 'application/octet-stream' } })
       const filename = path.resolve(catalogRoot, relative)
       if (!filename.startsWith(catalogRoot + path.sep)) return new Response('', { status: 400 })
       return new Response(fs.readFileSync(filename), { headers: { 'content-type': relative.endsWith('.json') ? 'application/json' : 'application/octet-stream' } })

@@ -25,7 +25,7 @@ function loadTs(filename) {
   return loaded.exports
 }
 const { PluginManager, parseCatalog, unpackPlugin } = loadTs(path.join(project, 'src/main/modules/optionalPlugins/manager.ts'))
-const { OFFICIAL_PLUGIN_ROOT } = loadTs(path.join(project, 'src/common/optionalPlugins.ts'))
+const { OFFICIAL_PLUGIN_ROOT, pluginText, comparePluginVersions, isPluginId } = loadTs(path.join(project, 'src/common/optionalPlugins.ts'))
 const hash = bytes => createHash('sha256').update(bytes).digest('hex')
 const bundle = (id, version = '1.0.0', transform = value => value) => {
   const data = Buffer.from('module.exports = { default: { components: {} } }')
@@ -42,7 +42,7 @@ async function fixture(t) {
   const state = { packages: [bundle('sound-effects'), bundle('audio-visualizer')], offline: false, corruptDownload: false }
   const fetchBinary = async url => {
     if (state.offline) throw new Error('Offline')
-    if (url === OFFICIAL_PLUGIN_ROOT + 'catalog.json') return Buffer.from(JSON.stringify({ schemaVersion: 1, plugins: state.packages.map(item => item.entry) }))
+    if (url === OFFICIAL_PLUGIN_ROOT + 'catalog-v2.json') return Buffer.from(JSON.stringify({ schemaVersion: 1, plugins: state.packages.map(item => item.entry) }))
     const item = state.packages.find(item => url === OFFICIAL_PLUGIN_ROOT + item.entry.path)
     assert.ok(item, url)
     return state.corruptDownload ? Buffer.from('broken') : item.archive
@@ -52,17 +52,26 @@ async function fixture(t) {
 
 test('the distributable official plugins pass all package checks', async() => {
   const root = path.join(project, 'plugins/official')
-  const catalog = parseCatalog(await fs.readFile(path.join(root, 'catalog.json')))
-  assert.equal(catalog.plugins.length, 2)
+  const catalog = parseCatalog(await fs.readFile(path.join(root, 'catalog-v2.json')))
+  assert.equal(catalog.plugins.length, 3)
+  const legacy = parseCatalog(await fs.readFile(path.join(root, 'catalog.json')))
+  assert.deepEqual(legacy.plugins.map(entry => entry.id), ['sound-effects', 'audio-visualizer'])
   for (const entry of catalog.plugins) {
-    const result = unpackPlugin(await fs.readFile(path.join(root, entry.path)), entry)
+    const bytes = await fs.readFile(path.join(root, entry.path))
+    const result = unpackPlugin(bytes, entry)
     assert.equal(result.manifest.id, entry.id)
     assert.ok(result.files.some(file => file.path === 'renderer.js'))
     if (entry.id === 'sound-effects') assert.ok(result.files.some(file => file.path.startsWith('filters/')))
-    else {
+    else if (entry.id === 'audio-visualizer') {
       assert.ok(result.files.some(file => file.path === 'lyric.js'))
       assert.ok(result.files.some(file => file.path === 'NOTICE.md'))
       assert.ok(result.files.some(file => file.path === 'licenses/audioMotion-AGPL-3.0.txt'))
+    } else {
+      assert.equal(result.manifest.apiVersion, 2)
+      for (const name of ['engine/index.html', 'engine/engine.js', 'engine/engine.css', 'source.tar.gz', 'LICENSE', 'NOTICE.md', 'licenses/THIRD-PARTY.txt']) {
+        assert.ok(result.files.some(file => file.path === name), name)
+      }
+      assert.throws(() => unpackPlugin(bytes, { ...entry, apiVersion: 1 }))
     }
   }
 })
@@ -129,14 +138,93 @@ test('a failed update preserves the installed version and corruption can be repa
   await assert.rejects(fs.stat(initial.directory), { code: 'ENOENT' })
 })
 
+test('Folia API 2 installs, updates and removes its entire engine directory', async t => {
+  const { manager, state, root } = await fixture(t)
+  const rootCatalog = path.join(project, 'plugins/official')
+  const entry = parseCatalog(await fs.readFile(path.join(rootCatalog, 'catalog-v2.json'))).plugins.find(entry => entry.id === 'folia-lyrics')
+  state.packages.push({ entry, archive: await fs.readFile(path.join(rootCatalog, entry.path)) })
+  await manager.refresh()
+  const first = (await manager.install('folia-lyrics')).installed['folia-lyrics']
+  assert.equal(first.manifest.apiVersion, 2)
+  assert.ok(await fs.stat(path.join(first.directory, 'engine/index.html')))
+  const second = (await manager.install('folia-lyrics')).installed['folia-lyrics']
+  assert.notEqual(second.directory, first.directory)
+  await assert.rejects(fs.stat(first.directory), { code: 'ENOENT' })
+  assert.deepEqual((await manager.uninstall('folia-lyrics')).installed, {})
+  assert.deepEqual(await fs.readdir(root), ['catalog-cache.json', 'installed.json'])
+})
+
 test('concurrent install and uninstall are serialized and unsupported plugin APIs are rejected', async t => {
   const { manager, state, root } = await fixture(t)
   await manager.refresh()
   await Promise.all([manager.install('sound-effects'), manager.uninstall('sound-effects')])
   assert.deepEqual((await manager.snapshot()).installed, {})
-  assert.deepEqual(await fs.readdir(root), ['installed.json'])
+  assert.deepEqual(await fs.readdir(root), ['catalog-cache.json', 'installed.json'])
   state.packages[0].entry.apiVersion = 99
   await manager.refresh()
   await assert.rejects(manager.install('sound-effects'), /different application version/)
   await assert.rejects(manager.install('../outside'), /Unknown official plugin/)
+})
+
+test('previously unknown catalog plugins install, update and retain metadata offline', async t => {
+  const { manager, state, restart } = await fixture(t)
+  const id = 'new-plugin2'
+  const name = { 'zh-cn': '目录中的新插件', 'en-us': 'A new catalog plugin' }
+  const make = version => {
+    const result = bundle(id, version, archive => { archive.manifest.name = name; return archive })
+    result.entry.name = name
+    return result
+  }
+  state.packages.push(make('1.0.0'))
+  await manager.refresh()
+  const first = (await manager.install(id)).installed[id]
+  assert.equal(first.manifest.name['zh-cn'], name['zh-cn'])
+  state.packages[2] = make('1.1.0')
+  await manager.refresh()
+  assert.equal((await manager.install(id)).installed[id].manifest.version, '1.1.0')
+  await assert.rejects(fs.stat(first.directory), { code: 'ENOENT' })
+  state.offline = true
+  const reopened = restart()
+  const snapshot = await reopened.snapshot()
+  assert.equal(snapshot.catalog.find(plugin => plugin.id === id).name['zh-cn'], name['zh-cn'])
+  assert.equal(snapshot.installed[id].manifest.version, '1.1.0')
+  assert.equal((await reopened.refresh()).catalog.length, 3)
+  assert.equal((await reopened.uninstall(id)).installed[id], undefined)
+  await assert.rejects(manager.install('not-in-the-catalog'), /not published/)
+})
+
+test('dynamic metadata rejects unsafe keys and malformed entries without losing the last good catalog', async t => {
+  const { manager, state, restart } = await fixture(t)
+  for (const id of ['constructor', 'prototype', '__proto__', '../outside', 'C:drive', 'bad.name', 'CON', 'nul', 'a'.repeat(65)]) assert.equal(isPluginId(id), false, id)
+  await manager.refresh()
+  for (const patch of [{ name: { en: { text: 'bad' } } }, { description: 'x'.repeat(2001) }, { icon: 'https://example.com/icon.svg' }]) {
+    const { entry } = bundle('brand-new-plugin')
+    assert.throws(() => parseCatalog(Buffer.from(JSON.stringify({ schemaVersion: 1, plugins: [{ ...entry, ...patch }] }))))
+  }
+  state.packages[0].entry.name = { 'en-us': 123 }
+  assert.ok((await manager.refresh()).catalogError)
+  assert.equal((await restart().snapshot()).catalog.length, 2)
+})
+
+test('an altered registration cannot remove another plugin directory', async t => {
+  const { manager, state, root } = await fixture(t)
+  state.packages.push(bundle('brand-new-plugin'))
+  await manager.refresh()
+  await manager.install('sound-effects')
+  const snapshot = await manager.install('brand-new-plugin')
+  const filename = path.join(root, 'installed.json')
+  const registry = JSON.parse(await fs.readFile(filename, 'utf8'))
+  registry['brand-new-plugin'] = registry['sound-effects']
+  await fs.writeFile(filename, JSON.stringify(registry))
+  await assert.rejects(manager.uninstall('brand-new-plugin'), /Invalid installed plugin directory/)
+  assert.ok(await fs.stat(snapshot.installed['sound-effects'].directory))
+})
+
+test('catalog text falls back by locale and updates compare numeric versions', () => {
+  assert.equal(pluginText({ 'zh-cn': '插件', 'en-us': 'Plugin' }, 'zh-cn'), '插件')
+  assert.equal(pluginText({ 'en-us': 'Plugin' }, 'zh-tw'), 'Plugin')
+  assert.equal(pluginText(undefined, 'zh-cn', 'remote-id'), 'remote-id')
+  assert.equal(comparePluginVersions('1.10.0', '1.9.0'), 1)
+  assert.equal(comparePluginVersions('1.0.0', '1.1.0'), -1)
+  assert.equal(comparePluginVersions('1.1.0', '1.1.0'), 0)
 })

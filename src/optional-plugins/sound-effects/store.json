@@ -1,0 +1,13 @@
+{
+  "name": {
+    "zh-cn": "音效增强",
+    "zh-tw": "音效增強",
+    "en-us": "Sound Effects"
+  },
+  "description": {
+    "zh-cn": "包含十段均衡器、环境混响、环绕音效和变调，支持保存个人预设。",
+    "zh-tw": "包含十段等化器、環境混響、環繞音效與變調，支援儲存個人預設。",
+    "en-us": "Ten-band equalizer, convolution reverb, surround effects and pitch shifting, with personal presets."
+  },
+  "icon": "#icon-tune-variant"
+}

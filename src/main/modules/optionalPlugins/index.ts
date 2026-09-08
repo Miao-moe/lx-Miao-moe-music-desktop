@@ -1,6 +1,6 @@
 import { BrowserWindow, ipcMain, net } from 'electron'
 import path from 'node:path'
-import { OFFICIAL_PLUGIN_ROOT, PLUGIN_IPC, type PluginId, type PluginStoreSnapshot } from '@common/optionalPlugins'
+import { OFFICIAL_PLUGIN_ROOT, PLUGIN_CATALOG_FILE, PLUGIN_IPC, type PluginId, type PluginStoreSnapshot } from '@common/optionalPlugins'
 import { PluginManager } from './manager'
 
 export default () => {
@@ -9,7 +9,7 @@ export default () => {
     // net.request also supports the Electron 22 Windows 7 build and the app's proxy.
     return new Promise<Buffer>((resolve, reject) => {
       const request = net.request({ url, partition: 'persist:win-main', redirect: 'error' })
-      if (url.endsWith('/catalog.json')) request.setHeader('Cache-Control', 'no-cache')
+      if (url.endsWith('/' + PLUGIN_CATALOG_FILE)) request.setHeader('Cache-Control', 'no-cache')
       let completed = false
       const fail = (error: Error) => {
         if (completed) return

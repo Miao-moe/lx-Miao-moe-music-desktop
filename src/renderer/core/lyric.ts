@@ -12,6 +12,9 @@ const getCurrentTime = () => {
 }
 
 let lrc: Lyric
+export interface RawLyricLine { time: number, text: string, extendedLyrics: string[] }
+// Optional renderers consume the same parsed timestamps and words as the native lyric player.
+export const getRawLyricLines = (): RawLyricLine[] => musicInfo.id && musicInfo.lrc ? lrc?.initInfo.lines ?? [] : []
 let desktopLyricPort: Electron.IpcRendererEvent['ports'][0] | null = null
 
 const syncLyricPosition = (syncDesktop = true, restorePaused = false) => {

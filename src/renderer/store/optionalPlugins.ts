@@ -4,17 +4,21 @@ import { PLUGIN_IPC, type PluginId, type PluginStoreSnapshot } from '@common/opt
 import { createPluginRuntime } from '@common/optionalPluginRuntime'
 import * as player from '@renderer/plugins/player'
 import * as settings from './setting'
-import { isPlay } from './player/state'
+import { isPlay, musicInfo, isShowPlayerDetail } from './player/state'
+import { lyric as lyricState } from './player/lyric'
+import { playProgress } from './player/playProgress'
 import { dialog } from '@renderer/plugins/Dialog'
-import { setDesktopAnalyserProvider } from '@renderer/core/lyric'
+import { setDesktopAnalyserProvider, getRawLyricLines } from '@renderer/core/lyric'
 import { getUserSoundEffectConvolutionPresetList, getUserSoundEffectEQPresetList, saveUserSoundEffectConvolutionPresetList, saveUserSoundEffectEQPresetList } from '@renderer/utils/ipc'
 
 export const pluginRuntime = createPluginRuntime({
   player,
   settings,
-  playerState: { isPlay },
+  playerState: { isPlay, musicInfo, isShowPlayerDetail },
+  mainLyricState: { lyric: lyricState },
+  playProgress: { playProgress },
   dialog: { dialog },
-  lyric: { setDesktopAnalyserProvider },
+  lyric: { setDesktopAnalyserProvider, getRawLyricLines },
   ipc: { getUserSoundEffectConvolutionPresetList, getUserSoundEffectEQPresetList, saveUserSoundEffectConvolutionPresetList, saveUserSoundEffectEQPresetList },
 })
 export const pluginStore = shallowRef<PluginStoreSnapshot>({ revision: -1, catalog: [], installed: {}, errors: {}, catalogError: null })

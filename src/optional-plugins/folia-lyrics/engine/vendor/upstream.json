@@ -1,0 +1,957 @@
+{
+  "project": "Folia",
+  "version": "0.7.4",
+  "repository": "https://github.com/chthollyphile/folia-major",
+  "adapted": [
+    "src/components/visualizer/VisualizerShell.tsx",
+    "src/hooks/usePlayerBottomBarBottomPx.ts",
+    "src/services/temperaLayerImages.ts"
+  ],
+  "files": [
+    {
+      "path": "LICENSE",
+      "bytes": 34523,
+      "sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0"
+    },
+    {
+      "path": "src/components/visualizer/FumeBackground.ts",
+      "bytes": 16377,
+      "sha256": "427b7b30bf751c592a54776193620fce40d9b99d50b26c44b16ec9a3596953c3"
+    },
+    {
+      "path": "src/components/visualizer/VisualizerShell.tsx",
+      "bytes": 8087,
+      "sha256": "8bafc72e33b3142db11a9f2a642ce83f92edf8f2143651f20b0040afbaf4cbf3"
+    },
+    {
+      "path": "src/components/visualizer/VisualizerSubtitleOverlay.tsx",
+      "bytes": 9190,
+      "sha256": "bf63b84527d3a70c795b638d5dd2e102b76cf2e529f7105e64272f6f20cc79ae"
+    },
+    {
+      "path": "src/components/visualizer/cadenza/VisualizerCadenza.tsx",
+      "bytes": 67191,
+      "sha256": "30ecebe5e39bea29e60f23f1eda415e93dd808ad36c4a16d4840731cca171ac3"
+    },
+    {
+      "path": "src/components/visualizer/cappella/VisualizerCappella.tsx",
+      "bytes": 66994,
+      "sha256": "3cc7d76445a2fddd4425e39360e21277874f7a97932a2156a1fe5d0628c89f71"
+    },
+    {
+      "path": "src/components/visualizer/cappella/avatarImages.ts",
+      "bytes": 3195,
+      "sha256": "a983b5f45af1ecd722ddf5d53739920310b92ba2af7b12647934854f2b31a4be"
+    },
+    {
+      "path": "src/components/visualizer/cappella/avatar/avatar10.png",
+      "bytes": 115463,
+      "sha256": "4035121ed3b22b5003f4e27ba6e9c6aeecdebd507efa061892f8875e6ef3a959"
+    },
+    {
+      "path": "src/components/visualizer/cappella/avatar/avatar11.png",
+      "bytes": 111145,
+      "sha256": "25a068ab205b3a88c05a46a4ad046057b0051237f565c428eec22f7c503e8e28"
+    },
+    {
+      "path": "src/components/visualizer/cappella/avatar/avatar12.png",
+      "bytes": 107763,
+      "sha256": "f15f4965291ab9d60e74a1efa157863eac50dbe7a1d5f12352d692eb944ffe9e"
+    },
+    {
+      "path": "src/components/visualizer/cappella/avatar/avatar13.png",
+      "bytes": 99334,
+      "sha256": "adcd0e06daba7a66c9e5999996bc2bb321b2387e22b1e1e98fbbe358ecddb08d"
+    },
+    {
+      "path": "src/components/visualizer/cappella/avatar/avatar14.png",
+      "bytes": 96385,
+      "sha256": "fd53c1e576ba63c8b4b0a9850ae92534fe7a29fc4f7965617ea9dffaa6622145"
+    },
+    {
+      "path": "src/components/visualizer/cappella/avatar/avatar15.png",
+      "bytes": 99891,
+      "sha256": "5da23256a79ffd82fa3730fe47608894864fb71ec439bf6e9c320aafa49e9d02"
+    },
+    {
+      "path": "src/components/visualizer/cappella/avatar/avatar16.png",
+      "bytes": 89248,
+      "sha256": "3dffc23427ba4d7815e9b4a8f2924588898a76bf67fab208461d60c61135a37c"
+    },
+    {
+      "path": "src/components/visualizer/cappella/avatar/avatar17.png",
+      "bytes": 104869,
+      "sha256": "785c65510dbc65f55643285d696b3ebbe8393ae810dd3f4b139a9d4abbc2a391"
+    },
+    {
+      "path": "src/components/visualizer/cappella/avatar/avatar2.png",
+      "bytes": 96930,
+      "sha256": "0a4e767889ed4edd5bd44f01eeee798f97469890b375d7c19b94ff974f689505"
+    },
+    {
+      "path": "src/components/visualizer/cappella/avatar/avatar3.png",
+      "bytes": 93992,
+      "sha256": "d152b38874a2a9673daf3c5d74a14ff4857cb819444abb05e3ace024cf897eb4"
+    },
+    {
+      "path": "src/components/visualizer/cappella/avatar/avatar4.png",
+      "bytes": 99584,
+      "sha256": "45f76f9d6fe69f9fd19f527546caccc1575521b4ffa751b2021e6e6295b1fae1"
+    },
+    {
+      "path": "src/components/visualizer/cappella/avatar/avatar5.png",
+      "bytes": 101333,
+      "sha256": "de40095f9d92bcfe76556e29b16de31fdcef245a88c655a4724917ca5388c06d"
+    },
+    {
+      "path": "src/components/visualizer/cappella/avatar/avatar6.png",
+      "bytes": 113937,
+      "sha256": "a43f830abac8aa239514b774949a3f0f90e34bdaae2bc05ab6955f9af9f13a0a"
+    },
+    {
+      "path": "src/components/visualizer/cappella/avatar/avatar8.png",
+      "bytes": 112120,
+      "sha256": "06e484382164fff797b5556debc0d0bff135a63acbc21a4ef3f6f2bf4bd24913"
+    },
+    {
+      "path": "src/components/visualizer/cappella/avatar/avatar9.png",
+      "bytes": 111309,
+      "sha256": "4b69364b216cd650ba242cb2a0cfbc88c14b8a5009f1b24fb7fd38651699e565"
+    },
+    {
+      "path": "src/components/visualizer/cappella/cappellaMessageSenders.ts",
+      "bytes": 2103,
+      "sha256": "7a083a3d73b037ced1397a5a3179a8def9feb09a57a57f62556635d0786f68ab"
+    },
+    {
+      "path": "src/components/visualizer/cappella/emoImages.ts",
+      "bytes": 1638,
+      "sha256": "e24aac4fe38c1c329e592030f64a20c317d3ca5ba3420cbcd5bff2063ad35c4c"
+    },
+    {
+      "path": "src/components/visualizer/cappella/emo/happy1.png",
+      "bytes": 234098,
+      "sha256": "40a14a6681c64d021f0551a6b952b3d4f18c19a70ab3fe22a345eb2632829b51"
+    },
+    {
+      "path": "src/components/visualizer/cappella/emo/love1.png",
+      "bytes": 232145,
+      "sha256": "52c721eacb9eddf163fa1400845f4a8c061185c8ec461488a6736af01325bb34"
+    },
+    {
+      "path": "src/components/visualizer/cappella/emo/normal1.png",
+      "bytes": 226498,
+      "sha256": "4c187b4cc9d845505debff2cd8920f6f2ef2ccd6f38276c8257fb293a3460fe1"
+    },
+    {
+      "path": "src/components/visualizer/cappella/emo/sleepy1.png",
+      "bytes": 189843,
+      "sha256": "5936e72c149668218b00b3c8be31ceab983f0b4170fbf432d9855620a41e82b9"
+    },
+    {
+      "path": "src/components/visualizer/cappella/emo/sleepy2.png",
+      "bytes": 231772,
+      "sha256": "9fcd10b701c32cd4cd7929b8a869597ffc4ffc299ebedcd1672a472d414b18a5"
+    },
+    {
+      "path": "src/components/visualizer/cappella/emo/sleepy3.png",
+      "bytes": 217251,
+      "sha256": "2933a5cb993b9bb013cb1eab28195b1f9dd0efc49b8c78c7924c863bf92dd340"
+    },
+    {
+      "path": "src/components/visualizer/cappella/emo/vibe1.png",
+      "bytes": 238340,
+      "sha256": "3a9031b76924ef3b9b4e7a308f4adbcce01a893a818ed71fe224d9e8bfe4d969"
+    },
+    {
+      "path": "src/components/visualizer/cappella/emo/vibe2.png",
+      "bytes": 260266,
+      "sha256": "00d9ea690ac2ece66b2f3346faaaab64c4cd5ebb365b2501fcabaacc7b0b70a6"
+    },
+    {
+      "path": "src/components/visualizer/cappella/emo/vibe3.png",
+      "bytes": 261687,
+      "sha256": "73875a9d190f9a0b4799af650cdbc2f53103baa59c78adf03aedd57b26dc5346"
+    },
+    {
+      "path": "src/components/visualizer/claddagh/VisualizerCladdagh.tsx",
+      "bytes": 46193,
+      "sha256": "b3a3991b2e0a473da31fb471307ad037b97d7f457c9ea2e68d5c5e49ae3c1d67"
+    },
+    {
+      "path": "src/components/visualizer/classic/Visualizer.tsx",
+      "bytes": 32608,
+      "sha256": "88b8cbeca64251480b36eab959608258123c31668b49618679f799e002cb1629"
+    },
+    {
+      "path": "src/components/visualizer/colorMix.ts",
+      "bytes": 3757,
+      "sha256": "31bb63a2c52ab9001b0c3b02d85472caa8c81d25d0b32ce07368ed070f7bac5f"
+    },
+    {
+      "path": "src/components/visualizer/diorama/CameraRig.tsx",
+      "bytes": 24333,
+      "sha256": "86d9fd1e5ef829b62650cec6c5fb7eb5a9db8154b75d9fcab6caea515fc448f4"
+    },
+    {
+      "path": "src/components/visualizer/diorama/DioramaParticleField.tsx",
+      "bytes": 19453,
+      "sha256": "6b23bd8046b89cdfa109b7f8c13f318117f9e22a7c9772a64c8f32011c3add67"
+    },
+    {
+      "path": "src/components/visualizer/diorama/DioramaScene.tsx",
+      "bytes": 76554,
+      "sha256": "21c4730d27cd99267e7f5e3bfc2aa8591e742983c6f1164fee74c746c3dc4a16"
+    },
+    {
+      "path": "src/components/visualizer/diorama/VisualizerDiorama.tsx",
+      "bytes": 31400,
+      "sha256": "099033c512dcf38a205817397c3952db7a8664734c6b38558781dce3d75a6c9c"
+    },
+    {
+      "path": "src/components/visualizer/diorama/cameraPath.ts",
+      "bytes": 48586,
+      "sha256": "71adb1bcb6b7c099a147848065004d48de1d3fa2f45122681cd2fb50d0ce3e76"
+    },
+    {
+      "path": "src/components/visualizer/diorama/dioramaGeometry.ts",
+      "bytes": 3973,
+      "sha256": "76357aef11c05502c031a32c7be64aa5141cfb999c40144b5c737850056b537c"
+    },
+    {
+      "path": "src/components/visualizer/diorama/dioramaKeywordColor.ts",
+      "bytes": 9100,
+      "sha256": "10a6d0c629690723eccd8c43fc4daa5e00bb2e2902455bedc38b018f7f0caf3e"
+    },
+    {
+      "path": "src/components/visualizer/diorama/dioramaMoteField.ts",
+      "bytes": 7979,
+      "sha256": "0babd748a65c04586cadca8c5f8494d7e350d6e59327f14923b9e49c968445a5"
+    },
+    {
+      "path": "src/components/visualizer/diorama/dioramaParticleCorridor.ts",
+      "bytes": 4667,
+      "sha256": "385d1256a50c07f83082a69953c939a17de5f4d96adbce239b5b48118917bbf4"
+    },
+    {
+      "path": "src/components/visualizer/diorama/dioramaParticleMaterials.ts",
+      "bytes": 9342,
+      "sha256": "8dd90ee9568d56936e8f92bf254f46289b6c4e3e50112796f693777139dff08f"
+    },
+    {
+      "path": "src/components/visualizer/diorama/dioramaParticleModel.ts",
+      "bytes": 26357,
+      "sha256": "3d6a3637c106c6ececfcda7748b253bac64d308b8b06e5e9572166488d41934d"
+    },
+    {
+      "path": "src/components/visualizer/diorama/dioramaParticleShaders.ts",
+      "bytes": 20144,
+      "sha256": "9e6bcc8287a6e3de4aed34def937fe87c4400aded887d58485c60e30a1e079f2"
+    },
+    {
+      "path": "src/components/visualizer/diorama/dioramaParticleSurfaces.ts",
+      "bytes": 11728,
+      "sha256": "d4f77613c4a321c1957c4d92fa889269aa7a66e1103eccf1f2138d223d434e17"
+    },
+    {
+      "path": "src/components/visualizer/diorama/dioramaSequencer.ts",
+      "bytes": 7673,
+      "sha256": "840b37e72c0947daa238a91e15efee1436cb66aef1da6655dd9db809a19b0efa"
+    },
+    {
+      "path": "src/components/visualizer/diorama/dioramaTextRaster.ts",
+      "bytes": 7922,
+      "sha256": "085bc682dbe3e15ba08cede13108063b4ff1cf0a4a79b35be35be56722a41d28"
+    },
+    {
+      "path": "src/components/visualizer/diorama/dioramaTransition.ts",
+      "bytes": 5645,
+      "sha256": "aa5cdc1e3a4b2255d557e6a15216abd1aa55a2b2b78d83e748fba34a8a5ecea1"
+    },
+    {
+      "path": "src/components/visualizer/fume/VisualizerFume.tsx",
+      "bytes": 124982,
+      "sha256": "9bd55fc1e1a045b22beb64749491e58723cbbd54567e6fb7b31b2155682e3f16"
+    },
+    {
+      "path": "src/components/visualizer/loadPixi.ts",
+      "bytes": 2360,
+      "sha256": "904465fff97dda3c39aa9891fdb39d52bb832cd2fa6f06049baf98b74c2fc203"
+    },
+    {
+      "path": "src/components/visualizer/monet/AudioOverlay.tsx",
+      "bytes": 13366,
+      "sha256": "99513d7e3635fd15d2087abdbc423bcf3d037023e2c1b86bc231a826dd879e35"
+    },
+    {
+      "path": "src/components/visualizer/monet/MonetFloatingDecor.tsx",
+      "bytes": 5015,
+      "sha256": "ad829ae68c8b1702444a1728d53b7d721d508da2bba75b4b80dbcb9417d0dcdb"
+    },
+    {
+      "path": "src/components/visualizer/monet/MonetLyricsRail.tsx",
+      "bytes": 44208,
+      "sha256": "4fc40688e2f28079a4a3b2c82ef2e90256e1efc00eb0ec94237a3d871b0ff5f6"
+    },
+    {
+      "path": "src/components/visualizer/monet/MonetPortraitImage.tsx",
+      "bytes": 4060,
+      "sha256": "3857dbca7d4a1f6b84f9f498dc9a94a5495b10a0b52eb6330e0163cd192efc74"
+    },
+    {
+      "path": "src/components/visualizer/monet/VisualizerMonet.tsx",
+      "bytes": 31692,
+      "sha256": "77aae35aac2421953e8b8564f2f9176b9acbe415c586f6bc538eb817c622b6ff"
+    },
+    {
+      "path": "src/components/visualizer/monet/monetLyricMotion.ts",
+      "bytes": 3119,
+      "sha256": "660203bcd3d743976959c72bdf705790efac4d0de22bd5351e42bda41cb9c657"
+    },
+    {
+      "path": "src/components/visualizer/monet/monetLyricsModel.ts",
+      "bytes": 20768,
+      "sha256": "60fdb1296fbb260643a3dbe28ecbcc297312a24bb1a5a26506fc07aee8c5513e"
+    },
+    {
+      "path": "src/components/visualizer/monet/monetPortraitCrossfade.ts",
+      "bytes": 2695,
+      "sha256": "f7c6a9c63dc97853a85bf1d7dbe2a846e19bb1bd65254c7ff2a85a5635a7ae76"
+    },
+    {
+      "path": "src/components/visualizer/partita/VisualizerPartita.tsx",
+      "bytes": 43076,
+      "sha256": "7f2364171c3b56a152202bf386e70316ec85847195983b744a25ee5ed652586c"
+    },
+    {
+      "path": "src/components/visualizer/pendolo/PendoloActiveLyricSweep.tsx",
+      "bytes": 8482,
+      "sha256": "c54a40d6ce52146c1c31f94bb1ca8934dea519e317bd0ee9c01409daa1ff85f3"
+    },
+    {
+      "path": "src/components/visualizer/pendolo/PendoloClockworkCanvas.tsx",
+      "bytes": 31571,
+      "sha256": "f753c4b61539d2dc7220d0dd1a29a46e44be0e4093f1d3cebb281b6460f48835"
+    },
+    {
+      "path": "src/components/visualizer/pendolo/PendoloRotatingLine.tsx",
+      "bytes": 1520,
+      "sha256": "4e5d952088c103b5d7f968813b5cf47a841889db311eed31e59fce551a9af531"
+    },
+    {
+      "path": "src/components/visualizer/pendolo/VisualizerPendolo.tsx",
+      "bytes": 31407,
+      "sha256": "70cad246f46ad5ec0495814f74626092424830e2a672b3e407882c8ab63bb23d"
+    },
+    {
+      "path": "src/components/visualizer/pendolo/pendoloColorRuns.ts",
+      "bytes": 976,
+      "sha256": "1c5b5b3607e0702470a14d52be98990bc8ce47a15de9caaf06e5391e62b7ef5f"
+    },
+    {
+      "path": "src/components/visualizer/pendolo/pendoloGeometry.ts",
+      "bytes": 5141,
+      "sha256": "896e277de978909cb46f9c1b53e91c6fff3158fbd6b599feeb54fc36c587d14d"
+    },
+    {
+      "path": "src/components/visualizer/pendolo/pendoloMotionProfile.ts",
+      "bytes": 2830,
+      "sha256": "cf8cd1afcb0e9c22e8229fb405b8eccdf2da6042962943c2bc9f6bf01e9f1200"
+    },
+    {
+      "path": "src/components/visualizer/pendolo/pendoloTextLayout.ts",
+      "bytes": 1422,
+      "sha256": "f4aab6b5f8edc823cffba77cd756eabaa41e8975c5cb4379d55347ad37772e8c"
+    },
+    {
+      "path": "src/components/visualizer/pendolo/pendoloTimeline.ts",
+      "bytes": 1420,
+      "sha256": "1eee502dd0a2f42da279195b3e4ba7e57b67448eedc2f1635117ec005f4240f6"
+    },
+    {
+      "path": "src/components/visualizer/pixiDisplayResources.ts",
+      "bytes": 1342,
+      "sha256": "9a537907aeba020b7ac7a226d024cd16a703dea4b1499f71227e124a5c604edd"
+    },
+    {
+      "path": "src/components/visualizer/pixiRuntimeHost.ts",
+      "bytes": 6371,
+      "sha256": "1a8cfb4ae55a2a3c30c4d8015a593e8968049e32872ea036d41f025989372eb1"
+    },
+    {
+      "path": "src/components/visualizer/pixiTextureBudget.ts",
+      "bytes": 5689,
+      "sha256": "12f0805308b823a543c3238c7b9459f59918f4b046232344b0779ceb2c40fa59"
+    },
+    {
+      "path": "src/components/visualizer/runtime.ts",
+      "bytes": 4693,
+      "sha256": "4055fca28b1bddc4522318ce53c2239c7e681e0d8b0b711b22b19cb7556c3d47"
+    },
+    {
+      "path": "src/components/visualizer/songHandover.ts",
+      "bytes": 9586,
+      "sha256": "64a41436d37e804d53301d1ebdac60e348ebee5fbdcbd7a7875d783ac198f729"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/VisualizerSonnet.tsx",
+      "bytes": 9063,
+      "sha256": "1ce40758f7317a5e330b6176e6fc3665fdc9be5ae38a9959eabfd884665081a4"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/createSonnetPixiRuntime.ts",
+      "bytes": 47924,
+      "sha256": "a8dcd5f53bc0571042e337566a4088e78695045fc3e4f6a53ae4212268564983"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetAdditionalShotMg.ts",
+      "bytes": 10711,
+      "sha256": "950518fa877b0546c6d8b0e5f3e3683e1bc8d39e9da1e1c09cc233e52af018e0"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetAnimatedGraphics.ts",
+      "bytes": 11436,
+      "sha256": "4738e94810901d2212a008f5b69fff493818989f2e7dbafd56334a6a8ac3c794"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetBackgroundDecor.ts",
+      "bytes": 10216,
+      "sha256": "20fb6fc7df5cd4174df37aae57bb14724b1b939d9a2c46e82de245c9fb11a6f5"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetBackgroundMgVariants.ts",
+      "bytes": 16247,
+      "sha256": "b674affbf49bf62b36fffb408e03b89a61d192c5dbcec67b69d49185be560856"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetCameraTracking.ts",
+      "bytes": 1866,
+      "sha256": "a461a102987fde096e3fa9fcf0cab8900f411f46a4624c0555650403ddb3e90e"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetCredits.ts",
+      "bytes": 5616,
+      "sha256": "786f25359426db09f18aea1fbcae9bb9465d0c65b5722e2db747083d0eca84c3"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetDebug.ts",
+      "bytes": 7270,
+      "sha256": "f81c253c779bd5f7e7d1833281ee559711b6aa6f6ee985318c75679726367f57"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetExtendedShotMg.ts",
+      "bytes": 1540,
+      "sha256": "1568cf8accb66f51b09d631b88083f34779e410c8d90b3564443315d3f758045"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetFixedGeoVariants.ts",
+      "bytes": 9539,
+      "sha256": "b1502252de38d537867e0cde74c96a7917a9c710f0aab2d608c85fae423a64d0"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetFrameDecor.ts",
+      "bytes": 12408,
+      "sha256": "1431a85fd45f77403805c9436adfc6f7c706ffa95b9e5adb0b39d1fce8961b45"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetGlitchFilter.ts",
+      "bytes": 3213,
+      "sha256": "f379bd32c0a184a509e963333c5e1ca191d367b56d03d15a832cdbb660d9a679"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetGlyphLayout.ts",
+      "bytes": 3431,
+      "sha256": "c6737255202dbd2d51537e7b930b9f57fa706d6279357ebdb03a2be20f1a12e8"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetGuides.ts",
+      "bytes": 11878,
+      "sha256": "bbc9affe9e765cbee817b9b08f0e7b2a58dc63d8aa47638b4f285e77320f3d32"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetIcons.ts",
+      "bytes": 3803,
+      "sha256": "e1353efc879fb97ca0cf2544f1cb8c3d0320097fbecd3b41835653826a774e7f"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetLensFilter.ts",
+      "bytes": 3756,
+      "sha256": "f7aaf58a694971198d18bfebd0f60d20ab7d30fddb53057e01c2e090f9304439"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetMotion.ts",
+      "bytes": 10902,
+      "sha256": "45a699c600d9a38e0327179cd00eda1190409be0b699dcc04dc3eb191f630f41"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetOpenFrameShotMg.ts",
+      "bytes": 18341,
+      "sha256": "38f49032648f3218ff7f11e04646c50611caaae16a0d0a3000613e53220798ca"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetPixiResources.ts",
+      "bytes": 165,
+      "sha256": "9fa0494fdf5cbcf817f813b56c7c58e86b00d756d3c17024df2435d8f6a140a9"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetPostProcess.ts",
+      "bytes": 4967,
+      "sha256": "2c5862c8e3901b806a5bb38075da307b0daea3331543b6aee58a4c73f02bda29"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetPosterBlocksLayout.ts",
+      "bytes": 12638,
+      "sha256": "9e58443110c9f126d32c1e88d2adbcb3abd74f2640e3d702f99224618b54ae89"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetPrintFilters.ts",
+      "bytes": 5517,
+      "sha256": "3140998d91176c924b33ccea4934510fe7087c52ef81389988ef149d8934ca55"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetProgram.ts",
+      "bytes": 12066,
+      "sha256": "49871d8029679ee4930cd51b425271c7c2b46c06e7dfd4979fd1914930e75004"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetRandom.ts",
+      "bytes": 910,
+      "sha256": "5fc8d99376f0f8f5380b9454446d2160321f42d69d47aca442c57beea6ce7d81"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetSceneBuilder.ts",
+      "bytes": 15365,
+      "sha256": "8388b51f3ec65c419ce694ff8e30a5bf4b9ae0d68a79172d74409d82409104f3"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetSemantic.ts",
+      "bytes": 3026,
+      "sha256": "6bec2e32026c031e91a9fea818ad0350d08efd01c0a78d5bb141d3a9cd95baed"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetShotFlowLayouts.ts",
+      "bytes": 27128,
+      "sha256": "923678bbb88172ff13caddcc7ef5162c28d09535e346a4829890c54aa7e20637"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetShotMg.ts",
+      "bytes": 41780,
+      "sha256": "02464c59101eab0d515e247b63369f5b16d6909afdf15266ff9cbf20e456794d"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetShotMgArchitecture.ts",
+      "bytes": 4805,
+      "sha256": "06432ed9084f9a6eba15e5dfeb82a96af3145552e070acfd192a7f941faf9ee6"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetShotMgBotanical.ts",
+      "bytes": 3605,
+      "sha256": "f8e4d1e90465283551312a1a71a73829deff6112cd759272ddb8e60fb5b28cae"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetShotMgCelestial.ts",
+      "bytes": 13337,
+      "sha256": "51ec1ace0e751aba23445cb44d20515036f34c1bbc6440a8df2db1b8d95e66ee"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetShotMgCraft.ts",
+      "bytes": 14032,
+      "sha256": "7f3825f5e84921b97a59c2ab2a01b0690c7b87cc80efab0d88a4a51816c635ba"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetShotMgFlora.ts",
+      "bytes": 3582,
+      "sha256": "29059a4ec1204b498384ad56f30de60bc011f2efc81cb81bb5302458a1e41fdb"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetShotMgKinetic.ts",
+      "bytes": 17959,
+      "sha256": "61feea33ca6014556a8221aba8337afcaf22e9217c258daedcebcd7da83ddb2c"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetShotMgLandscape.ts",
+      "bytes": 4725,
+      "sha256": "3208e2ec88f8548af05f109928187204686e93fe1c04cabe5a8e7e9d0e6b6794"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetShotMgMarine.ts",
+      "bytes": 14738,
+      "sha256": "c85c7224b93d47dbfffed1b8a28cb4fb8f61ba1a6dd7ee5af4ead685f2f3e350"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetShotMgMusic.ts",
+      "bytes": 10599,
+      "sha256": "0c0d7c85a3a0ce0cb2ba59810b7b8817bfad2244644c69f24431b08acf50d441"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetShotMgViewport.ts",
+      "bytes": 334,
+      "sha256": "ca38d5ce183a138cdccb3f783649d2f52a26b20697887be452a851513a51cf96"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetSpatialMgGeometry.ts",
+      "bytes": 4565,
+      "sha256": "c3a22d9bb2c56fafb657f2757fa07dbaf7989609d105825b4bbdec6a346b4efe"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetStaffNotation.ts",
+      "bytes": 1614,
+      "sha256": "a325fedf35f9799c47f2d6f6ff51333781745c0eee465a974ec591e76220ecee"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetStaffView.ts",
+      "bytes": 7078,
+      "sha256": "1e04c2ed033586ecd021fde6a4d659266e3d46d401b4dd53404dbf15fc90aa06"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetTextFixedGeo.ts",
+      "bytes": 8154,
+      "sha256": "710c6276bdd35ff0772481ed772809f754229c5a3485957a0e8463550620ef50"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetTextViewBuilder.ts",
+      "bytes": 14984,
+      "sha256": "58b487c851c36fa253c2d93be214201ded6394c08d5411c7a78948bd04a052fa"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetTexturePool.ts",
+      "bytes": 2229,
+      "sha256": "560a56509118ef9d044531b172b9c1d5174e083f3231d36b40c91015523e3d43"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetThemedShotMg.ts",
+      "bytes": 1588,
+      "sha256": "caf666b7944e4435f68758c51df47b8b0889f09c7da968370e7c2dedffc93c9a"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetThemedShotMgPrimitives.ts",
+      "bytes": 2365,
+      "sha256": "f6f77e4e58b41ef44954ac9643d39df0ceccc31562094f6b8bda481294091ec0"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetTransitions.ts",
+      "bytes": 4779,
+      "sha256": "50a7e306a6163942371bd36007847ebbd353d4437b47ef90e4a3126f0e193463"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetTypographyLayout.ts",
+      "bytes": 17804,
+      "sha256": "19b0fc30e9964e46965a4ee470232f8fc6d00ffb246d09981caaad147d95c69b"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/sonnetTypographyRoles.ts",
+      "bytes": 4601,
+      "sha256": "5438eb25f23c29b8acfbce4c149dc7a24df97de08f59da31d93e6b942142340b"
+    },
+    {
+      "path": "src/components/visualizer/sonnet/types.ts",
+      "bytes": 2434,
+      "sha256": "21643a8b47c747eb125a7785519e03b48b624f0190af349309fe32fd1f45006c"
+    },
+    {
+      "path": "src/components/visualizer/still/VisualizerStill.tsx",
+      "bytes": 4456,
+      "sha256": "4dcfac20443d202cb0d703c80b90f424c72420fc33584000720d31413a115307"
+    },
+    {
+      "path": "src/components/visualizer/tempera/VisualizerTempera.tsx",
+      "bytes": 12125,
+      "sha256": "79d43121a6f89f985c30875deb4f111350ec415259481f28d87e686b23df6709"
+    },
+    {
+      "path": "src/components/visualizer/tempera/compositions/temperaApertureCompositions.ts",
+      "bytes": 10361,
+      "sha256": "1f551915f9935acdc7f1429d021cae5d8ddcb36c988ad859bb32f9343f59febc"
+    },
+    {
+      "path": "src/components/visualizer/tempera/compositions/temperaBandCompositions.ts",
+      "bytes": 9543,
+      "sha256": "ad056f2cf06f897b146910b457895532de16634342102114894f5bc9a87f1186"
+    },
+    {
+      "path": "src/components/visualizer/tempera/compositions/temperaCharmCompositions.ts",
+      "bytes": 16336,
+      "sha256": "95aab5a917e7debb71d73bd00dc612172c6be63663b4a283707c5b381c7899a5"
+    },
+    {
+      "path": "src/components/visualizer/tempera/compositions/temperaCinemaCompositions.ts",
+      "bytes": 6303,
+      "sha256": "cf9a42c9fba6313acb4cb00abd5c2fe5a205a767e2ccc23135acb220331647a0"
+    },
+    {
+      "path": "src/components/visualizer/tempera/compositions/temperaCorridorCompositions.ts",
+      "bytes": 10218,
+      "sha256": "667d314dff8112a936e74659ba195d39a10831d8eb85f07f14fb691505629654"
+    },
+    {
+      "path": "src/components/visualizer/tempera/compositions/temperaCutout.ts",
+      "bytes": 4841,
+      "sha256": "b2a13029b5042c32f4ae0ad3836bf5cb664c410c1adfe652c182169522873005"
+    },
+    {
+      "path": "src/components/visualizer/tempera/compositions/temperaFrameCompositions.ts",
+      "bytes": 10970,
+      "sha256": "694583696bffb4eb7ec4b68284b92cf7d048d3dbc9f41d916bc174dec0c97c7d"
+    },
+    {
+      "path": "src/components/visualizer/tempera/compositions/temperaMonogatariCompositions.ts",
+      "bytes": 4751,
+      "sha256": "9a71253fb54ff45aa9b198ac639dc6f7fe55dec47e064b55adb4497bffe955fe"
+    },
+    {
+      "path": "src/components/visualizer/tempera/compositions/temperaMonolithCompositions.ts",
+      "bytes": 10854,
+      "sha256": "67322110ce4d4ad2e308e2d4043873ea3036db97166e52702668ebf7821def39"
+    },
+    {
+      "path": "src/components/visualizer/tempera/compositions/temperaMonolithKit.ts",
+      "bytes": 5153,
+      "sha256": "b98fbc34039fc3d5daa6fc2122595dd39a5fe2be4fd327eeca4ca23b307bd12b"
+    },
+    {
+      "path": "src/components/visualizer/tempera/compositions/temperaPosterCompositions.ts",
+      "bytes": 10528,
+      "sha256": "43d46797b9bbc2086517e5d2b03752fc3bbfcb2bd720d1e9a372396d753407fb"
+    },
+    {
+      "path": "src/components/visualizer/tempera/compositions/temperaSignalCompositions.ts",
+      "bytes": 14055,
+      "sha256": "2596468993abb10af402100e246e380c9c9cdbda441db87eaeabebc691ce38cd"
+    },
+    {
+      "path": "src/components/visualizer/tempera/compositions/temperaSparseCompositions.ts",
+      "bytes": 7475,
+      "sha256": "515982b85d2ec8d4e2dd0c760b898a56d7f86224d1c023fc2ff1182f1b273aa2"
+    },
+    {
+      "path": "src/components/visualizer/tempera/compositions/temperaSplitCompositions.ts",
+      "bytes": 12860,
+      "sha256": "d9a5054963ee139196358276e4accc3dd8bda8b65d07a6a32cc54a663912f8c6"
+    },
+    {
+      "path": "src/components/visualizer/tempera/compositions/temperaTerrainCompositions.ts",
+      "bytes": 10264,
+      "sha256": "0781763f5132db265ae852168a48b91a7ae0c7882a6f502edb90830caf881c78"
+    },
+    {
+      "path": "src/components/visualizer/tempera/createTemperaPixiRuntime.ts",
+      "bytes": 48949,
+      "sha256": "3e3a7df14866c88eb194c53d1cd9f347d2184585f19fea2e6e47126ab67d5fe5"
+    },
+    {
+      "path": "src/components/visualizer/tempera/temperaBlocks.ts",
+      "bytes": 6759,
+      "sha256": "5a7ab23e0feadef326afe9c235f75d422038c5e99a7b3b14c40142f5665b9f21"
+    },
+    {
+      "path": "src/components/visualizer/tempera/temperaCamera.ts",
+      "bytes": 3107,
+      "sha256": "1809de7f1c97fcadbebb70e953b7d6be5f2ba03b53998acba35b83d27e9a6cf5"
+    },
+    {
+      "path": "src/components/visualizer/tempera/temperaCompositions.ts",
+      "bytes": 6095,
+      "sha256": "cac0835c9db378433abd6de52f20f0161deba382b8b964ae9a7fae38199c1395"
+    },
+    {
+      "path": "src/components/visualizer/tempera/temperaCurves.ts",
+      "bytes": 10204,
+      "sha256": "cd99a41af6315c26e8b5b9153f62db789f4f99dbecd787314e3b1d15ad763895"
+    },
+    {
+      "path": "src/components/visualizer/tempera/temperaDifferenceFilter.ts",
+      "bytes": 8562,
+      "sha256": "4fe51be1a23817540b563bc3baa7c7d00fc06f019db3311cf15db5c8d4ed2d7f"
+    },
+    {
+      "path": "src/components/visualizer/tempera/temperaEnterStyles.ts",
+      "bytes": 4241,
+      "sha256": "425d68e06795599cc5d9d6c19065d36e8832ad60fc1d7eec61be70d80c0b3f3e"
+    },
+    {
+      "path": "src/components/visualizer/tempera/temperaHatch.ts",
+      "bytes": 11149,
+      "sha256": "87651a4b19550f1fb5bcf040a71c5a1d4ab8e91d44d7be8bec5b2a6bfb78e8b8"
+    },
+    {
+      "path": "src/components/visualizer/tempera/temperaImageLayer.ts",
+      "bytes": 7110,
+      "sha256": "373ccae7eff99d4ca1fddc8f3a4a8633d447e7bbb84b8d881b7e0058ba621098"
+    },
+    {
+      "path": "src/components/visualizer/tempera/temperaLayout.ts",
+      "bytes": 17115,
+      "sha256": "d0389819f6ee83131f564c6f8fc647f534246037a243b35c0e91edab8eef5cd4"
+    },
+    {
+      "path": "src/components/visualizer/tempera/temperaMeasure.ts",
+      "bytes": 5139,
+      "sha256": "877b320415fbd74ae246dfaaaa387da687744b7b7a26128b5b250cd4c6ec9b81"
+    },
+    {
+      "path": "src/components/visualizer/tempera/temperaMotion.ts",
+      "bytes": 6705,
+      "sha256": "6ec03279608a7625fb999530eab2d443992a0ae076defa666bab322833aa93fc"
+    },
+    {
+      "path": "src/components/visualizer/tempera/temperaMotionEasing.ts",
+      "bytes": 1849,
+      "sha256": "5afddfe6fa1843c582d6547e2edebba74751e8f9d04e44c035af310887219e33"
+    },
+    {
+      "path": "src/components/visualizer/tempera/temperaPalette.ts",
+      "bytes": 9713,
+      "sha256": "179aa111814273dd4ccff6e6911175755f44ad6c06df16f89c35fc27a6f07c24"
+    },
+    {
+      "path": "src/components/visualizer/tempera/temperaProgram.ts",
+      "bytes": 27835,
+      "sha256": "3047cf6c678cc9069b4e36c5174ea2f39dcaa92a4da46f4648b6d4e10aafcd77"
+    },
+    {
+      "path": "src/components/visualizer/tempera/temperaRandom.ts",
+      "bytes": 1367,
+      "sha256": "19fa70fd8bf10a1b2835a71aba1c7307958593b5917a30e6b94e3fea05730a7a"
+    },
+    {
+      "path": "src/components/visualizer/tempera/temperaSceneBuilder.ts",
+      "bytes": 26583,
+      "sha256": "9a7c8ba3f50c8cd1213edd8eee27c9815a89cfc8c2da9a9900357124d2c3b43f"
+    },
+    {
+      "path": "src/components/visualizer/tempera/temperaSceneFilters.ts",
+      "bytes": 5572,
+      "sha256": "9bdb208a365afbc3af10983155ed249cb9111e5546aed68ece5bf12efafce341"
+    },
+    {
+      "path": "src/components/visualizer/tempera/temperaShapes.ts",
+      "bytes": 9860,
+      "sha256": "7190c4745bd4a954a3e9f7132a1c97142fab83c8dc8a54c4f025f5c86ab5fa1a"
+    },
+    {
+      "path": "src/components/visualizer/tempera/temperaShotProfiles.ts",
+      "bytes": 31403,
+      "sha256": "a1a88ee2a726ae1264574aa7df80197fb2e9db7b941391d214445acb4609fb32"
+    },
+    {
+      "path": "src/components/visualizer/tempera/temperaTextView.ts",
+      "bytes": 8031,
+      "sha256": "0e2503685fe24017aca9d48fec1dd204006fb35d73d57b5d2c8e741d08e000c8"
+    },
+    {
+      "path": "src/components/visualizer/tempera/temperaTransitions.ts",
+      "bytes": 4570,
+      "sha256": "dfb30f550937949e4c896c9370d0a10736b6ca3b3ff200ba4670e16e5ee00a2c"
+    },
+    {
+      "path": "src/components/visualizer/tempera/types.ts",
+      "bytes": 8641,
+      "sha256": "3793646ca33b7d8434d6187ed87c43afe2ce139a9078e04551aeab7ccb876a20"
+    },
+    {
+      "path": "src/components/visualizer/tilt/VisualizerTilt.tsx",
+      "bytes": 29188,
+      "sha256": "6bc19215be83804a51070aa7a7a6a5dc9a8475758db02727fb7f7027db110565"
+    },
+    {
+      "path": "src/components/visualizer/wordColoring.ts",
+      "bytes": 7691,
+      "sha256": "8264e518c1278a63759f9ebd7a6e172da4fd908de1aaaa0510c1031cc12415e9"
+    },
+    {
+      "path": "src/hooks/useElementWidth.ts",
+      "bytes": 1284,
+      "sha256": "9608f898679ceeb762fed9b4e4e29c76a0b1e3ba4765e5c6c6f990172847539b"
+    },
+    {
+      "path": "src/hooks/useFontsEpoch.ts",
+      "bytes": 2268,
+      "sha256": "1dc992b0861d1b090e1374e17dbda96440939aa9a60e08975ea70d7596439ae7"
+    },
+    {
+      "path": "src/hooks/usePlayerBottomBarBottomPx.ts",
+      "bytes": 3785,
+      "sha256": "3a766d6244eca2609c7a43c8279a217e1a35ebe61684f90b98d2d4e6c71cd9da"
+    },
+    {
+      "path": "src/mods/visualizerModulation.ts",
+      "bytes": 1948,
+      "sha256": "4dfc05847d97c54fd043eeea4f338f648d607c5e772001fb6ef68fc1674082b7"
+    },
+    {
+      "path": "src/services/temperaLayerImages.ts",
+      "bytes": 5104,
+      "sha256": "cf1a94d6978100adc322c6450b0115ce97a5ea78b9ee68491debc40667656ae9"
+    },
+    {
+      "path": "src/types.ts",
+      "bytes": 38262,
+      "sha256": "87c929548c10df14c4e7a41928439c97ac79647dabae6ae020b7f3769d7017f6"
+    },
+    {
+      "path": "src/utils/colorExtractor.ts",
+      "bytes": 3818,
+      "sha256": "c5709cfe5e7733ea823fe332f94e5c2cf0c786bdc1296bdd0a9a714c23fbe920"
+    },
+    {
+      "path": "src/utils/colorPalette.ts",
+      "bytes": 4781,
+      "sha256": "c6b6324d1f09f007531a89513c6be7727378204a1bff6926b6c335d86cb67888"
+    },
+    {
+      "path": "src/utils/fontStacks.ts",
+      "bytes": 4801,
+      "sha256": "2f7e3f0a97e73fdc57e9a76a14f06a2cf94648737ae4b14670b00ff1282c702f"
+    },
+    {
+      "path": "src/utils/frameRateLimiter.ts",
+      "bytes": 6611,
+      "sha256": "a4cd711b2aed231e005336d049b5f24683de1635133dff3eede89c61ab527cb6"
+    },
+    {
+      "path": "src/utils/lucideIconResolver.ts",
+      "bytes": 1069,
+      "sha256": "fd971ca95933c73401895547fd318abbe49e559f77978f4c77acf798c78de9b9"
+    },
+    {
+      "path": "src/utils/lyrics/alternateText.ts",
+      "bytes": 1162,
+      "sha256": "375bfe6e7fb6861c3555a3924c8d6b3a2e4ad068485829a1f6cb66779cb0cc8b"
+    },
+    {
+      "path": "src/utils/lyrics/cjkSemanticLayout.ts",
+      "bytes": 11337,
+      "sha256": "761be96eb93ee073c71b712e8d0b467ac4b0b73179363bcafa75439a3d96bfab"
+    },
+    {
+      "path": "src/utils/lyrics/graphemeTiming.ts",
+      "bytes": 4688,
+      "sha256": "76ca4929c7658486a793545114c249b5c7178d4ac6fa905a2d06b066576ede35"
+    },
+    {
+      "path": "src/utils/lyrics/parserCore.ts",
+      "bytes": 41526,
+      "sha256": "21b3ecf1983ec8690567c0417cdd53271fc2ccdd94450f161dbfb9aa8834ebb6"
+    },
+    {
+      "path": "src/utils/lyrics/renderHints.ts",
+      "bytes": 7827,
+      "sha256": "aca7b0f65815f24ecb3332a0215f3b5dfd80c8448f602c1c5bf8df650d855006"
+    },
+    {
+      "path": "src/utils/lyrics/sentenceLayout.ts",
+      "bytes": 19992,
+      "sha256": "d2604ebe66dc6b9b1e802d7bfeaed035a252a262ffd5557e3d9ecc91949f1239"
+    },
+    {
+      "path": "src/utils/lyrics/ttmlConversion.ts",
+      "bytes": 9906,
+      "sha256": "f5f1ac562f3603aafbf9a8239d454992440886e913cc59d5c8827bedf010375a"
+    },
+    {
+      "path": "src/utils/lyrics/wordSegmentation.ts",
+      "bytes": 5935,
+      "sha256": "ed72ad798161a1c82e427349a19b8a9ee1e77cfb9c327a1fd965b321907ed715"
+    }
+  ]
+}

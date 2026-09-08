@@ -192,7 +192,7 @@ export const createWindow = () => {
       nodeIntegration: true,
       sandbox: false,
       enableWebSQL: false,
-      webgl: false,
+      webgl: true, // Folia's canvas lyric styles create their WebGL context on demand.
       spellcheck: false, // 禁用拼写检查器
     },
   }

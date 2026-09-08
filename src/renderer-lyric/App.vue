@@ -12,6 +12,7 @@
       <transition enter-active-class="animated-fast fadeIn" leave-active-class="animated-fast fadeOut">
         <common-audio-visualizer v-if="setting['desktopLyric.audioVisualization']" />
       </transition>
+      <common-plugin-contributions name="desktopLyricOverlay" />
     </div>
     <template v-if="isShowResize">
       <div class="resize resize-left" @mousedown.self="handleMouseDown('left', $event)" @touchstart.self="handleTouchDown('left', $event)" />

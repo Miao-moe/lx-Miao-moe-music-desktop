@@ -1,0 +1,29 @@
+{
+  "name": "lx-m-folia-lyrics-engine",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "scripts": { "build": "node build.mjs" },
+  "dependencies": {
+    "@applemusic-like-lyrics/ttml": "1.0.1",
+    "@chenglou/pretext": "0.0.8",
+    "@react-three/fiber": "9.7.0",
+    "@xmldom/xmldom": "0.9.12",
+    "framer-motion": "13.0.0",
+    "i18next": "26.3.6",
+    "lucide-react": "1.31.0",
+    "pixi.js": "8.20.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-i18next": "17.0.11",
+    "three": "0.185.1",
+    "zustand": "5.0.14"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.3",
+    "postcss": "8.5.28",
+    "tailwindcss": "4.3.3",
+    "vite": "8.2.1"
+  }
+}

@@ -1,7 +1,8 @@
 import { inject, provide, type InjectionKey, type WatchSource } from 'vue'
 import { nextTick, onBeforeUnmount, ref, watch } from '@common/utils/vueTools'
+import { appSetting } from '@renderer/store/setting'
 
-export const listLoadingKey: InjectionKey<{ hold: () => () => void }> = Symbol('list-loading')
+export const listLoadingKey: InjectionKey<{ hold: (kind?: 'content' | 'cover') => () => void }> = Symbol('list-loading')
 
 // Rows and covers register while the content is mounted but hidden. Once shown,
 // scrolling can load more rows without hiding the whole list again.
@@ -9,6 +10,7 @@ export default (sources: WatchSource[], isLoading: () => boolean) => {
   const parent = inject(listLoadingKey, null)
   const ready = ref(false)
   const pending = new Set<symbol>()
+  const pendingCovers = new Set<symbol>()
   let revision = 0
   let frame = 0
   let disposed = false
@@ -18,6 +20,7 @@ export default (sources: WatchSource[], isLoading: () => boolean) => {
     const current = ++revision
     cancelAnimationFrame(frame)
     if (disposed || ready.value || isLoading() || pending.size) return
+    if (appSetting['list.loadingMode'] !== 'progressive' && pendingCovers.size) return
     void nextTick(() => {
       if (disposed || current !== revision) return
       // Allow layout and IntersectionObserver to start visible lazy covers.
@@ -32,12 +35,13 @@ export default (sources: WatchSource[], isLoading: () => boolean) => {
   }
 
   provide(listLoadingKey, {
-    hold: () => {
+    hold: (kind = 'content') => {
       const token = Symbol('list-resource')
-      pending.add(token)
+      const resources = kind === 'cover' ? pendingCovers : pending
+      resources.add(token)
       check()
       return () => {
-        if (pending.delete(token)) check()
+        if (resources.delete(token)) check()
       }
     },
   })
@@ -51,11 +55,14 @@ export default (sources: WatchSource[], isLoading: () => boolean) => {
     ready.value = false
     check()
   }, { immediate: true, flush: 'sync' })
+  // Apply changes to an ongoing wait without hiding content already on screen.
+  watch(() => appSetting['list.loadingMode'], check, { flush: 'sync' })
   onBeforeUnmount(() => {
     disposed = true
     revision++
     cancelAnimationFrame(frame)
     pending.clear()
+    pendingCovers.clear()
     finishParent?.()
   })
   return ready
