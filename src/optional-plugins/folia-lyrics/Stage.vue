@@ -1,5 +1,9 @@
 <template>
   <div :class="$style.stage" :data-folia-stage="preview ? 'preview' : 'player'">
+    <template v-if="!preview">
+      <div :class="$style.topReveal" aria-hidden="true" />
+      <div :class="$style.bottomReveal" aria-hidden="true" />
+    </template>
     <div :class="$style.toolbar" data-folia-toolbar>
       <span>{{ preview ? labels.demo : labels.title }}</span>
       <label :class="$style.picker">
@@ -48,6 +52,7 @@ const selectMode = (event: Event) => { savePreferences({ mode: (event.target as 
 .surface iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: transparent; }
 .error { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 16px; padding: 16px; text-align: center; }
 .saveError { flex: none; padding: 8px 14px; font-size: 12px; }
+.topReveal, .bottomReveal { display: none; }
 
 // Use the existing API 2 player slots so this layout can ship as a plugin update.
 .stage[data-folia-stage='player'] {
@@ -125,6 +130,83 @@ const selectMode = (event: Event) => { savePreferences({ mode: (event.target as 
   > :global([data-detail-part='controls']) {
     margin-top: auto;
     background: linear-gradient(to bottom, transparent, rgba(7, 13, 24, .42));
+  }
+}
+
+// Edge hit areas work even while the pointer is over the isolated lyric iframe.
+// They are behind the controls and leave the middle of the lyrics interactive.
+@media (hover: hover) and (pointer: fine) {
+  .topReveal, .bottomReveal {
+    display: block;
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 1;
+    -webkit-app-region: no-drag;
+  }
+  .topReveal { top: 0; height: @height-toolbar + 80px; }
+  .bottomReveal { bottom: 0; height: 136px; }
+
+  :global([data-player-detail]):has(> .stage[data-folia-stage='player']) {
+    --folia-top-opacity: 0;
+    --folia-top-events: none;
+    --folia-top-delay: 450ms;
+    --folia-bottom-opacity: 0;
+    --folia-bottom-events: none;
+    --folia-bottom-delay: 450ms;
+
+    .toolbar, > :global([data-detail-part='chrome']) {
+      opacity: var(--folia-top-opacity);
+      pointer-events: var(--folia-top-events);
+      transition: opacity var(--duration-fast) ease var(--folia-top-delay);
+    }
+    > :global([data-detail-part='chrome']) {
+      -webkit-app-region: no-drag;
+    }
+    > :global([data-detail-part='controls']) {
+      opacity: var(--folia-bottom-opacity);
+      pointer-events: var(--folia-bottom-events);
+      transition: opacity var(--duration-fast) ease var(--folia-bottom-delay);
+    }
+
+    &:has(.topReveal:hover, .toolbar:hover, .toolbar :focus-visible, .toolbar :active, .stage [role='alert']),
+    &:has(> :global([data-detail-part='chrome']:hover)),
+    &:has(> :global([data-detail-part='chrome']) :focus-visible) {
+      --folia-top-opacity: 1;
+      --folia-top-events: auto;
+      --folia-top-delay: 0s;
+    }
+
+    &:has(.bottomReveal:hover, .stage [role='alert']),
+    &:has(> :global([data-detail-part='controls']:hover)),
+    &:has(> :global([data-detail-part='controls']) :focus-visible),
+    &:has(> :global([data-detail-part='controls']) :active),
+    &:has(> :global([data-detail-part='controls']) :global([aria-expanded='true'])) {
+      --folia-bottom-opacity: 1;
+      --folia-bottom-events: auto;
+      --folia-bottom-delay: 0s;
+    }
+
+    // Keep mouse events in the host during a progress drag across the lyrics.
+    &:has(> :global([data-detail-part='controls']) :global([role='slider']:active)) .surface iframe {
+      pointer-events: none;
+    }
+
+    &:has(.topReveal:hover, .toolbar:hover) > :global([data-detail-part='chrome']) {
+      -webkit-app-region: drag;
+    }
+    &:global(.fullscreen) > :global([data-detail-part='chrome']),
+    :global(.maximized) & > :global([data-detail-part='chrome']) {
+      -webkit-app-region: no-drag;
+    }
+  }
+
+  // LX-M teleports volume/rate popups to #root; their arrow offset identifies
+  // those popups without depending on the host's generated CSS module names.
+  :global(#root):has(> :global([aria-hidden='false'][style*='--arrow-left'])) :global([data-player-detail]):has(> .stage[data-folia-stage='player']) {
+    --folia-bottom-opacity: 1;
+    --folia-bottom-events: auto;
+    --folia-bottom-delay: 0s;
   }
 }
 </style>

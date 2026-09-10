@@ -92,6 +92,8 @@ test('Folia installs, renders every style, follows playback and restores prefere
       assert.equal(await frame.evaluate(() => document.documentElement.dataset.line), '0')
     })
     await t.test('disabling and reenabling restores native lyrics without interrupting audio', async() => {
+      const controls = await page.locator('[data-player-detail] [data-detail-part="controls"]').boundingBox()
+      await page.mouse.move(controls.x + controls.width / 2, controls.y - 20)
       await page.locator('[data-folia-toggle]').click()
       await page.locator('[data-player-detail] .lyric').waitFor()
       assert.equal(await page.locator('[data-folia-stage="player"]').count(), 0)

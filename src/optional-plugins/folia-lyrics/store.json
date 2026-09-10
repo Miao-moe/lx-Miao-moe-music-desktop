@@ -5,9 +5,9 @@
     "en-us": "Folia Lyrics"
   },
   "description": {
-    "zh-cn": "让 Folia 动效铺满播放详情页，提供 13 种歌词样式、逐字动效、样式预览与独立开关。",
-    "zh-tw": "讓 Folia 動效鋪滿播放詳細頁，提供 13 種歌詞樣式、逐字動效、樣式預覽與獨立開關。",
-    "en-us": "Fill player details with immersive Folia animations, with 13 lyric styles, word animations, live previews and a separate toggle."
+    "zh-cn": "13 种 Folia 歌词动效铺满播放页，鼠标靠近时显示控制栏，支持逐字动效、样式预览与独立开关。",
+    "zh-tw": "13 種 Folia 歌詞動效鋪滿播放頁，滑鼠靠近時顯示控制列，支援逐字動效、樣式預覽與獨立開關。",
+    "en-us": "Fill the player with 13 Folia lyric styles and controls that appear as the pointer approaches, with word animations, previews and a separate toggle."
   },
   "icon": "#icon-lyric"
 }
