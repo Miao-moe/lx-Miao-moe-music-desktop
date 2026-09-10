@@ -1,5 +1,7 @@
-import { useMotionValue } from 'framer-motion'
+import { motionValue, useTransform } from 'framer-motion'
 
-// The host's playback controls sit outside the iframe, so subtitles need no reserved bar.
-export const usePlayerSubtitleBottomPx = () => useMotionValue(24)
-export const usePlayerBottomBarBottomPx = (base = 24) => useMotionValue(base)
+// The player renders edge to edge beneath LX-M's controls. Preview frames have
+// no controls, while the player supplies the measured height after UI scaling.
+export const playerBottomInset = motionValue(0)
+export const usePlayerBottomBarBottomPx = (base = 24) => useTransform(playerBottomInset, inset => inset + base)
+export const usePlayerSubtitleBottomPx = () => usePlayerBottomBarBottomPx()

@@ -1,6 +1,6 @@
 <template>
   <div :class="$style.stage" :data-folia-stage="preview ? 'preview' : 'player'">
-    <div :class="$style.toolbar">
+    <div :class="$style.toolbar" data-folia-toolbar>
       <span>{{ preview ? labels.demo : labels.title }}</span>
       <label :class="$style.picker">
         <span>{{ labels.style }}</span>
@@ -37,6 +37,8 @@ const selectMode = (event: Event) => { savePreferences({ mode: (event.target as 
 </script>
 
 <style lang="less" module>
+@import '@renderer/assets/styles/variables.less';
+
 .stage { display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; color: #f5f7fb; background: radial-gradient(ellipse at 25% 90%, #244346, #111b2c 70%); border-radius: 12px; }
 .toolbar { flex: none; display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 10px 14px; font-size: 12px; position: relative; z-index: 1; }
 .picker { display: flex; align-items: center; gap: 8px; margin-left: auto; }
@@ -46,4 +48,83 @@ const selectMode = (event: Event) => { savePreferences({ mode: (event.target as 
 .surface iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: transparent; }
 .error { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 16px; padding: 16px; text-align: center; }
 .saveError { flex: none; padding: 8px 14px; font-size: 12px; }
+
+// Use the existing API 2 player slots so this layout can ship as a plugin update.
+.stage[data-folia-stage='player'] {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+
+  .toolbar {
+    position: absolute;
+    top: @height-toolbar;
+    left: 0;
+    right: 0;
+    padding: 8px 30px;
+    color: #c9d7e3;
+  }
+
+  .surface { position: absolute; inset: 0; }
+
+  .toolbar select, .toolbar button {
+    background: rgba(255, 255, 255, .06);
+    border-color: rgba(201, 215, 227, .2);
+    transition: background-color var(--duration-fast), border-color var(--duration-fast);
+
+    &:hover {
+      background: rgba(255, 255, 255, .12);
+      border-color: rgba(201, 215, 227, .4);
+    }
+    &:focus-visible {
+      outline: 2px solid #74dab5;
+      outline-offset: 3px;
+    }
+  }
+
+  .saveError {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100px;
+    z-index: 1;
+    padding-inline: 30px;
+    background: rgba(17, 27, 44, .9);
+  }
+}
+
+// Scope the surrounding chrome to the mounted player stage. Comments, native
+// lyrics, closing the player and uninstalling immediately restore the host theme.
+:global([data-player-detail]):has(> .stage[data-folia-stage='player']) {
+  background: #111b2c;
+  --color-font: #e5edf4;
+  --color-font-label: #c9d7e3;
+  --color-button-font: #e5edf4;
+  --color-button-background-hover: rgba(255, 255, 255, .12);
+  --color-primary: #74dab5;
+  --color-accent: #74dab5;
+  --color-hover: rgba(255, 255, 255, .1);
+  --color-primary-light-100-alpha-800: rgba(201, 215, 227, .18);
+
+  > :global([data-detail-part='chrome']),
+  > :global([data-detail-part='controls']) {
+    position: relative;
+    z-index: 1;
+    color: var(--color-font);
+  }
+
+  > :global([data-detail-part='chrome']) {
+    background: linear-gradient(to bottom, rgba(7, 13, 24, .24), transparent);
+  }
+
+  > :global([data-detail-part='controls']) {
+    margin-top: auto;
+    background: linear-gradient(to bottom, transparent, rgba(7, 13, 24, .42));
+  }
+}
 </style>

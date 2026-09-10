@@ -17,6 +17,8 @@ export default (element: Ref<HTMLIFrameElement | null>, preview: boolean) => {
   let analyser: ReturnType<typeof createAudioAnalyser> | undefined
   let frequency = new Uint8Array(0)
   let observer: MutationObserver | undefined
+  let layoutObserver: ResizeObserver | undefined
+  let controls: HTMLElement | null = null
   let disposed = false
   let buffering = false
   const audio = getAudioElement()
@@ -34,6 +36,15 @@ export default (element: Ref<HTMLIFrameElement | null>, preview: boolean) => {
     analyser = undefined
   }
   const syncState = () => {
+    const currentControls = preview ? null : element.value?.closest('[data-player-detail]')?.querySelector<HTMLElement>('[data-detail-part="controls"]') ?? null
+    if (controls !== currentControls) {
+      layoutObserver?.disconnect()
+      controls = currentControls
+      if (controls) {
+        layoutObserver ??= new ResizeObserver(syncState)
+        layoutObserver.observe(controls)
+      }
+    }
     const song: FoliaSong = preview ? demoSong : {
       id: musicInfo.id ?? '',
       title: musicInfo.name,
@@ -49,6 +60,7 @@ export default (element: Ref<HTMLIFrameElement | null>, preview: boolean) => {
       fontFamily: appSetting['common.font'],
       fontScale: Math.max(0.5, Math.min(2, appSetting['playDetail.style.fontSize'] / 140)),
       reducedMotion: document.documentElement.dataset.motionEnabled === 'false',
+      bottomInset: controls?.offsetHeight ?? 0,
     }
     send('state', { song, config })
   }
@@ -115,6 +127,8 @@ export default (element: Ref<HTMLIFrameElement | null>, preview: boolean) => {
     ready.value = false
     cancelAnimationFrame(frameId)
     clearTimeout(loadTimer)
+    layoutObserver?.disconnect()
+    controls = null
     if (value) loadTimer = setTimeout(fail, 15000)
   })
   onMounted(() => {
@@ -128,6 +142,7 @@ export default (element: Ref<HTMLIFrameElement | null>, preview: boolean) => {
     cancelAnimationFrame(frameId)
     clearTimeout(loadTimer)
     observer?.disconnect()
+    layoutObserver?.disconnect()
     window.removeEventListener('message', receive)
     for (const event of audioEvents) audio.removeEventListener(event, audioEvent)
     analyser?.dispose()

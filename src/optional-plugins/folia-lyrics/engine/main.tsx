@@ -6,6 +6,7 @@ import { initReactI18next } from 'react-i18next'
 import { FOLIA_CHANNEL, type FoliaConfig, type FoliaFrame, type FoliaSong } from '../protocol'
 import { installGlobalVisualizerFrameRateLimiter } from './vendor/src/utils/frameRateLimiter'
 import { getLineRenderEndTime } from './vendor/src/utils/lyrics/renderHints'
+import { playerBottomInset } from './adapters/bottomBar'
 import './styles.css'
 
 // React receives discrete song/configuration updates; its lyric clock remains a MotionValue.
@@ -85,6 +86,7 @@ function App() {
       const { type, data } = event.data
       if (type === 'state') {
         if (!renderers[data.config?.mode as keyof typeof renderers] || !Array.isArray(data.song?.lines)) return
+        playerBottomInset.set(Math.max(0, Number(data.config.bottomInset) || 0))
         stateRef.current = data
         setState(data)
         void i18n.changeLanguage(data.config.language.startsWith('zh') ? 'zh' : 'en')

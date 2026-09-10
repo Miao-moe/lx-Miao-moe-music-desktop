@@ -12,7 +12,7 @@ const adapters = new Map([
   ['src/components/visualizer/VisualizerShell', 'Shell.tsx'],
   ['src/hooks/usePlayerBottomBarBottomPx', 'bottomBar.ts'],
   ['src/services/temperaLayerImages', 'images.ts'],
-].map(([source, adapter]) => [path.join(root, 'vendor', source).replaceAll('\\', '/'), path.join(root, 'adapters', adapter)]))
+].map(([source, adapter]) => [path.join(root, 'vendor', source).replaceAll('\\', '/'), path.join(root, 'adapters', adapter).replaceAll('\\', '/')]))
 await build({
   root,
   configFile: false,

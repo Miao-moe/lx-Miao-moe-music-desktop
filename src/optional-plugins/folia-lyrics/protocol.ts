@@ -25,6 +25,7 @@ export interface FoliaConfig {
   fontFamily: string
   fontScale: number
   reducedMotion: boolean
+  bottomInset: number
 }
 export interface FoliaFrame {
   time: number

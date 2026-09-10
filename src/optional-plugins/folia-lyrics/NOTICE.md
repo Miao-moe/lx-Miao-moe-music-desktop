@@ -6,4 +6,6 @@ Folia and this adaptation are distributed under GNU AGPL version 3. The full lic
 
 Corresponding plugin source, assets, dependency lockfile and build instructions are included in `source.tar.gz` and maintained at https://github.com/Miao-moe/lx-m_lx-Miao-moe-music-desktop/tree/master/src/optional-plugins/folia-lyrics. Extract with `tar -xzf source.tar.gz`. In the repository run `npm ci --prefix src/optional-plugins/folia-lyrics/engine`, then `npm run build:plugins -- folia-lyrics`.
 
+The player adapter renders across the full detail page beneath the host controls. It measures the playback bar and offsets shared subtitles above it, including after interface scaling; settings previews retain their own viewport and subtitle spacing.
+
 The engine bundles React/React DOM, Motion, PixiJS, Three.js/React Three Fiber, pretext, Lucide, i18next/react-i18next, Zustand, xmldom and AMLL's TTML parser. Their licenses are included in `licenses`. Runtime rendering does not download code or access Folia accounts. The package retains source through updates and can run offline after installation.
