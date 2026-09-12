@@ -284,15 +284,20 @@ export default {
 
 @lists-item-height: 36px;
 .lists {
-  flex: none;
-  width: 16%;
+  flex: auto;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
   display: flex;
   flex-flow: column nowrap;
 }
 .listHeader {
+  box-sizing: border-box;
   position: relative;
   display: flex;
   flex-flow: row nowrap;
+  padding-right: var(--panel-sidebar-rail, 0px);
   border-bottom: var(--color-list-header-border-bottom);
   &:hover {
     .listsAdd {

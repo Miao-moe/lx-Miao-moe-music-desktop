@@ -1,9 +1,9 @@
 <template>
-  <div :class="$style.container" data-list-loading :aria-busy="!ready">
-    <div :class="[$style.content, { [$style.pending]: !ready }]" :aria-hidden="!ready || undefined" :inert="!ready || undefined">
+  <div :class="$style.container" data-list-loading :aria-busy="immediate ? !!loading : !ready">
+    <div :class="[$style.content, { [$style.pending]: hidden }]" :aria-hidden="hidden || undefined" :inert="hidden || undefined">
       <slot />
     </div>
-    <div v-if="!ready" :class="[$style.status, 'ui-state']" role="status">
+    <div v-if="!ready && !immediate" :class="[$style.status, 'ui-state']" role="status">
       <span class="ui-spinner" />
       <p>{{ $t('list__loading') }}</p>
     </div>
@@ -11,6 +11,8 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from '@common/utils/vueTools'
+import { appSetting } from '@renderer/store/setting'
 import useListLoading from '@renderer/utils/compositions/useListLoading'
 
 const props = defineProps<{
@@ -18,6 +20,8 @@ const props = defineProps<{
   loading?: boolean
 }>()
 const ready = useListLoading([() => props.loadKey, () => props.loading], () => !!props.loading)
+const immediate = computed(() => appSetting['list.loadingMode'] === 'immediate')
+const hidden = computed(() => !ready.value || (immediate.value && props.loading && Array.isArray(props.loadKey) && !props.loadKey.length))
 </script>
 
 <style lang="less" module>

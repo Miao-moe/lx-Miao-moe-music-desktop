@@ -3,6 +3,8 @@
 import { sizeFormate, formatPlayTime } from '../../index'
 // import musicDetailApi from './musicDetail'
 import { eapiRequest } from './utils/index'
+import { assertSearch, readSearchBody, withSearchFallback } from '../searchFallback'
+import { cloudSearch, suggestionSearch } from './searchFallback'
 
 export default {
   limit: 30,
@@ -26,7 +28,7 @@ export default {
       total: page == 1,
       limit,
     })
-    return searchRequest.promise.then(({ body }) => body)
+    return searchRequest.promise.then(readSearchBody)
   },
   getSinger(singers) {
     let arr = []
@@ -40,6 +42,7 @@ export default {
     if (!rawList) return []
     return rawList.map(item => {
       item = item.baseInfo.simpleSongData
+      assertSearch(item?.id && item.name && Array.isArray(item.ar) && item.al && item.privilege)
       const types = []
       const _types = {}
       let size
@@ -91,25 +94,27 @@ export default {
       }
     })
   },
-  search(str, page = 1, limit, retryNum = 0) {
+  search: withSearchFallback(function(str, page, limit) { return this.searchPrimary(str, page, limit) }, [cloudSearch, suggestionSearch]),
+  searchPrimary(str, page = 1, limit, retryNum = 0) {
     if (++retryNum > 3) return Promise.reject(new Error('try max num'))
     if (limit == null) limit = this.limit
     return this.musicSearch(str, page, limit).then(result => {
       // console.log(result)
-      if (!result || result.code !== 200) return this.search(str, page, limit, retryNum)
+      if (!result || result.code !== 200) return this.searchPrimary(str, page, limit, retryNum)
+      assertSearch(result.data && (Array.isArray(result.data.resources) || result.data.totalCount === 0))
       let list = this.handleResult(result.data.resources || [])
       // console.log(list)
 
-      if (list == null) return this.search(str, page, limit, retryNum)
+      if (list == null) return this.searchPrimary(str, page, limit, retryNum)
 
-      this.total = result.data.totalCount || 0
+      this.total = result.data.totalCount
       this.page = page
-      this.allPage = Math.ceil(this.total / this.limit)
+      this.allPage = Math.ceil(this.total / limit)
 
       return {
         list,
         allPage: this.allPage,
-        limit: this.limit,
+        limit,
         total: this.total,
         source: 'wy',
       }

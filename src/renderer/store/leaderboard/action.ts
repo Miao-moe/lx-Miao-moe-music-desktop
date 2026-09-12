@@ -113,6 +113,7 @@ export const getAndSetListDetail = async(id: string, page: number, isRefresh = f
 
   listDetailInfo.key = key
   listDetailInfo.noItemLabel = window.i18n.t('list__loading')
+  listDetailInfo.list = []
 
   return getListDetail(id, page, isRefresh).then((result: ListDetailInfo) => {
     if (key != listDetailInfo.key) return

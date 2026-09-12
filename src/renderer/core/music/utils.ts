@@ -1,6 +1,7 @@
 import { qualityList } from '@renderer/store'
 import { assertApiSupport } from '@renderer/store/utils'
 import musicSdk from '@renderer/utils/musicSdk'
+import { getMusicCoverUrl } from '@renderer/utils/musicCover'
 import {
   // getOtherSource as getOtherSourceFromStore,
   // saveOtherSource as saveOtherSourceFromStore,
@@ -392,6 +393,13 @@ export const handleGetOnlineMusicUrl = async({ musicInfo, quality, onToggleSourc
 }
 
 
+const getSharedOnlinePicUrl = async(musicInfo: LX.Music.MusicInfoOnline, isRefresh: boolean): Promise<string> => {
+  if (isRefresh) return musicSdk[musicInfo.source].getPic(toOldMusicInfo(musicInfo))
+  const url: string = await getMusicCoverUrl(musicInfo)
+  if (!url) throw new Error('No artwork URL')
+  return url
+}
+
 export const getOnlineOtherSourcePicUrl = async({ musicInfos, onToggleSource, isRefresh, retryedSource = [] }: {
   musicInfos: LX.Music.MusicInfoOnline[]
   onToggleSource: (musicInfo?: LX.Music.MusicInfoOnline) => void
@@ -418,7 +426,7 @@ export const getOnlineOtherSourcePicUrl = async({ musicInfos, onToggleSource, is
 
   let reqPromise
   try {
-    reqPromise = musicSdk[musicInfo.source].getPic(toOldMusicInfo(musicInfo))
+    reqPromise = getSharedOnlinePicUrl(musicInfo, isRefresh)
   } catch (err: any) {
     reqPromise = Promise.reject(err)
   }
@@ -448,7 +456,7 @@ export const handleGetOnlinePicUrl = async({ musicInfo, isRefresh, onToggleSourc
   // console.log(musicInfo.source)
   let reqPromise
   try {
-    reqPromise = musicSdk[musicInfo.source].getPic(toOldMusicInfo(musicInfo))
+    reqPromise = getSharedOnlinePicUrl(musicInfo, isRefresh)
   } catch (err) {
     reqPromise = Promise.reject(err)
   }

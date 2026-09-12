@@ -1,6 +1,8 @@
 <template>
   <div id="my-list" :class="$style.container" @click="handleContainerClick">
-    <MyList ref="myList" :list-id="listId" @show-menu="$refs.musicList.handleMenuClick()" />
+    <common-resizable-sidebar name="myList" :label="$t('my_list')">
+      <MyList ref="myList" :list-id="listId" @show-menu="$refs.musicList.handleMenuClick()" />
+    </common-resizable-sidebar>
     <common-motion-view :motion-key="listId">
       <MusicList ref="musicList" :list-id="listId" @show-menu="$refs.myList.handleMenuClick()" />
     </common-motion-view>

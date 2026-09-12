@@ -31,8 +31,10 @@ onArtworkCacheCleared(() => {
  * @returns 缓存的封面 URL，未缓存时返回空字符串
  */
 export const getCachedCoverUrl = (item) => {
-  if (item.img || item.meta?.picUrl) return item.img || item.meta?.picUrl
-  const key = `${item.source}__${item.id}`
+  const info = item?.metadata?.musicInfo ?? item
+  if (!info) return ''
+  if (info.img || info.meta?.picUrl) return info.img || info.meta?.picUrl
+  const key = `${info.source}__${info.id}`
   if (coverDisplayCache.has(key)) return coverDisplayCache.get(key)
   // 尝试从底层缓存获取
   if (coverCache.has(key)) {
@@ -138,9 +140,9 @@ export const getMusicCoverUrl = (musicInfo) => {
       runTask()
     })
   })().then(url => {
-    if (generation === artworkCacheGeneration()) {
+    if (url && generation === artworkCacheGeneration()) {
       coverCache.set(key, url)
-      if (url) coverDisplayCache.set(key, url)
+      coverDisplayCache.set(key, url)
     }
     return url
   }).finally(() => {

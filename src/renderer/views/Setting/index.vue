@@ -46,7 +46,13 @@
       <div ref="dom_content_ref" class="scroll" :class="[$style.setting, {[$style.searchFiltering]: isFiltering}]">
       <p v-if="isFiltering && !visibleTocList.length" :class="$style.contentEmpty">{{ $t('setting__filter_empty') }}</p>
       <dl v-show="visibleTocList.length">
-        <component :is="avtiveComponentName" />
+        <template v-if="activePluginSetting">
+          <dt :id="activePluginSetting.id">{{ activePluginSetting.title }}</dt>
+          <dd>
+            <common-plugin-slot :key="activePluginSetting.pluginId" :plugin="activePluginSetting.pluginId" name="Settings" />
+          </dd>
+        </template>
+        <component :is="avtiveComponentName" v-else />
         <!-- <SettingBasic />
         <SettingPlay />
         <SettingPlayDetail />
@@ -73,6 +79,9 @@ import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from '@com
 // import { currentStting } from './setting'
 import { useI18n } from '@renderer/plugins/i18n'
 import { useRoute } from '@common/utils/vueRouter'
+import { pluginText } from '@common/optionalPlugins'
+import { pluginRuntime, pluginStore } from '@renderer/store/optionalPlugins'
+import { appSetting } from '@renderer/store/setting'
 
 import SettingBasic from './components/SettingBasic.vue'
 import SettingPlay from './components/SettingPlay.vue'
@@ -123,13 +132,31 @@ export default {
     const dom_filter_input = ref(null)
     const settingFilter = ref('')
 
+    const pluginSettingGroups = computed(() => {
+      const snapshot = pluginStore.value
+      const language = appSetting['common.langId']
+      return Object.keys(pluginRuntime.components).sort()
+        .filter(id => pluginRuntime.components[id]?.Settings)
+        .map(id => {
+          const installed = snapshot.installed[id]?.manifest
+          const available = snapshot.catalog.find(plugin => plugin.id === id)
+          return {
+            id: `SettingPlugin_${id}`,
+            pluginId: id,
+            title: pluginText(installed?.name ?? available?.name, language, id),
+            searchText: pluginText(installed?.description ?? available?.description, language),
+            prefixes: [],
+          }
+        })
+    })
     const tocList = computed(() => {
       return [
         { id: 'SettingBasic', title: t('setting__basic'), prefixes: ['setting__basic', 'theme'], keys: ['setting__play_timeout'] },
         { id: 'SettingPlay', title: t('setting__play'), prefixes: ['setting__play', 'setting__player'], excludes: ['setting__play_detail', 'setting__play_timeout'] },
         { id: 'SettingPluginStore', title: t('setting__plugins'), prefixes: ['setting__plugins', 'player__sound_effect'], keys: ['audio_visualization', 'setting__desktop_lyric_audio_visualization'] },
+        ...pluginSettingGroups.value,
         { id: 'SettingPlayDetail', title: t('setting__play_detail'), prefixes: ['setting__play_detail'] },
-        { id: 'SettingDesktopLyric', title: t('setting__desktop_lyric'), prefixes: ['setting__desktop_lyric'] },
+        { id: 'SettingDesktopLyric', title: t('setting__desktop_lyric'), prefixes: ['setting__desktop_lyric'], excludes: ['setting__desktop_lyric_audio_visualization'] },
         { id: 'SettingSearch', title: t('setting__search'), prefixes: ['setting__search'] },
         { id: 'SettingList', title: t('setting__list'), prefixes: ['setting__list'] },
         { id: 'SettingDownload', title: t('setting__download'), prefixes: ['setting__download'] },
@@ -155,6 +182,10 @@ export default {
 
       const messages = Object.entries(window.i18n.message)
       for (const group of tocList.value) {
+        if (normalizeSearchText(`${group.title} ${group.searchText ?? ''}`).includes(keyword)) {
+          ids.add(group.id)
+          continue
+        }
         for (const [key, value] of messages) {
           const matchesPrefix = group.prefixes.some(prefix => key == prefix || key.startsWith(`${prefix}_`)) || group.keys?.includes(key)
           const isExcluded = group.excludes?.some(prefix => key == prefix || key.startsWith(`${prefix}_`))
@@ -174,6 +205,7 @@ export default {
     const avtiveComponentName = ref(route.query.name && tocList.value.some(t => t.id == route.query.name)
       ? route.query.name
       : tocList.value[0].id)
+    const activePluginSetting = computed(() => pluginSettingGroups.value.find(group => group.id === avtiveComponentName.value))
 
     const clearSettingFilterState = () => {
       dom_content_ref.value?.querySelectorAll('.setting-search-visible').forEach(element => {
@@ -196,6 +228,11 @@ export default {
       const keyword = normalizeSearchText(settingFilter.value)
       if (!keyword || !dom_content_ref.value) return
 
+      if (activePluginSetting.value) {
+        markSearchBranch(dom_content_ref.value.querySelector('dl'))
+        return
+      }
+
       const getElementText = element => normalizeSearchText(`${element.textContent ?? ''} ${element.getAttribute('aria-label') ?? ''}`)
       const elements = [...dom_content_ref.value.querySelectorAll('dt, h3, h4, label, p, button, span, dd > div, [aria-label]')]
       const targets = elements.filter(element => {
@@ -211,11 +248,13 @@ export default {
       }
 
       for (const target of targets) {
+        const section = target.closest('dd')
         let itemRoot
         if (target.closest('article[data-plugin-id]')) {
           itemRoot = target.closest('article[data-plugin-id]')
-        } else if (target.tagName == 'H3') {
-          itemRoot = target.closest('dd')
+        } else if (target.tagName == 'H3' || section?.querySelector(':scope > h3')) {
+          // 命中组内选项时保留整组，便于查看和切换其他选项。
+          itemRoot = section
         } else if (target.tagName == 'H4') {
           itemRoot = target.parentElement
         } else {
@@ -224,7 +263,6 @@ export default {
         }
         markSearchBranch(itemRoot)
 
-        const section = itemRoot?.closest('dd')
         markSearchBranch(section?.querySelector(':scope > h3'))
       }
     }
@@ -252,6 +290,9 @@ export default {
     })
 
     watch(visibleTocList, (list) => {
+      if (!tocList.value.some(group => group.id === avtiveComponentName.value)) {
+        avtiveComponentName.value = 'SettingPluginStore'
+      }
       if (isFiltering.value && list.length && !list.some(group => group.id == avtiveComponentName.value)) {
         avtiveComponentName.value = list[0].id
       }
@@ -302,6 +343,7 @@ export default {
       visibleTocList,
       isFiltering,
       avtiveComponentName,
+      activePluginSetting,
       dom_content_ref,
       dom_filter_input,
       settingFilter,

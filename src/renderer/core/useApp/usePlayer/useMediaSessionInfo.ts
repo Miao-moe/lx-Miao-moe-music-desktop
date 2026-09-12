@@ -1,6 +1,6 @@
-import { onBeforeUnmount } from '@common/utils/vueTools'
+import { onBeforeUnmount, watch } from '@common/utils/vueTools'
 import { getDuration, getPlaybackRate, getCurrentTime } from '@renderer/plugins/player'
-import { isPlay, musicInfo, playMusicInfo } from '@renderer/store/player/state'
+import { isPlay, musicInfo, playMusicInfo, playerCover } from '@renderer/store/player/state'
 import { playProgress } from '@renderer/store/player/playProgress'
 import { pause, play, playNext, playPrev, stop } from '@renderer/core/player'
 
@@ -15,7 +15,6 @@ export default () => {
     emptyAudio.pause()
   }
   void emptyAudio.play()
-  let prevPicUrl = ''
 
   const updateMediaSessionInfo = () => {
     if (musicInfo.id == null) {
@@ -26,23 +25,13 @@ export default () => {
       title: musicInfo.name,
       artist: musicInfo.singer,
       album: musicInfo.album,
-      artwork: [],
+      artwork: playerCover.value ? [{ src: playerCover.value }] : [],
     }
-    if (musicInfo.pic) {
-      const pic = new Image()
-      pic.src = prevPicUrl = musicInfo.pic
-      pic.onload = () => {
-        if (prevPicUrl == pic.src) {
-          mediaMetadata.artwork = [{ src: pic.src }]
-          // @ts-expect-error
-          navigator.mediaSession.metadata = new window.MediaMetadata(mediaMetadata)
-        }
-      }
-    } else prevPicUrl = ''
 
     // @ts-expect-error
     navigator.mediaSession.metadata = new window.MediaMetadata(mediaMetadata)
   }
+  watch(playerCover, updateMediaSessionInfo)
 
   const updatePositionState = (state: {
     duration?: number

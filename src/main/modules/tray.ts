@@ -150,7 +150,7 @@ export const createTray = () => {
   // tray.setToolTip('LX Music')
   // createMenu()
   tray.setIgnoreDoubleClickEvents(true)
-  if (isWin) {
+  if (!isMac) {
     tray.on('click', () => {
       showMainWindow()
     })

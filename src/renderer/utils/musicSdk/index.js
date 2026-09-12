@@ -6,6 +6,7 @@ import mg from './mg/index'
 import bd from './bd/index'
 import xm from './xm'
 import { supportQuality } from './api-source'
+import { versionChars } from './versionChars'
 import { loadLocalSourcePlugins, loadRemoteSourcePlugins } from './plugins/loader'
 
 
@@ -140,8 +141,15 @@ const musicSdk = {
     const fSinger = filterStr(sortSingle(singer)).toLowerCase()
     const fAlbumName = filterStr(albumName).toLowerCase()
     const fInterval = getIntv(interval)
-    const isEqualsInterval = (intv) => Math.abs((fInterval || intv) - (intv || fInterval)) < 5
-    const isIncludesName = (name) => (fMusicName.includes(name) || name.includes(fMusicName))
+    const isEqualsInterval = (intv) => Math.abs((fInterval || intv) - (intv || fInterval)) <= 5
+    const isEqualsVersionMusicNameChar = (name) => {
+      for (const char of versionChars) {
+        const version = filterStr(char)
+        if (name.includes(version) != fMusicName.includes(version)) return false
+      }
+      return true
+    }
+    const isIncludesName = (name) => (fMusicName.includes(name) || name.includes(fMusicName)) && isEqualsVersionMusicNameChar(name)
     const isIncludesSinger = (singer) => fSinger ? (fSinger.includes(singer) || singer.includes(fSinger)) : true
     const isEqualsAlbum = (album) => fAlbumName ? fAlbumName == album : true
 

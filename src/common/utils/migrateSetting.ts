@@ -141,5 +141,12 @@ export default (setting: any): Partial<LX.AppSetting> => {
   }
 
 
+  // Enable the new lyric seek guide once for existing installations. Later
+  // changes to the option are preserved by the setting schema version.
+  if (compareVer(setting.version, '2.2.0') < 0) {
+    setting['playDetail.isShowLyricProgressSetting'] = true
+    setting.version = '2.2.0'
+  }
+
   return setting
 }

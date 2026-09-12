@@ -2,7 +2,7 @@
   <div :class="$style.player">
     <div data-player-cover :class="$style.picContent" :aria-label="$t('player__pic_tip')" @contextmenu="handleToMusicLocation" @click="showPlayerDetail">
       <transition name="cover-swap">
-        <img v-if="musicInfo.pic" :key="musicInfo.pic" :src="musicInfo.pic" decoding="async" @error="imgError">
+        <img v-if="playerCover" :key="playerCover" :src="playerCover" decoding="async" @error="imgError">
         <div v-else key="empty-cover" :class="$style.emptyPic">L<span>X</span></div>
       </transition>
     </div>
@@ -64,6 +64,7 @@ import usePlayProgress from '@renderer/utils/compositions/usePlayProgress'
 import {
   statusText,
   musicInfo,
+  playerCover,
   isShowPlayerDetail,
   isPlay,
   playInfo,
@@ -145,6 +146,7 @@ export default {
 
     return {
       musicInfo,
+      playerCover,
       nowPlayTimeStr,
       maxPlayTimeStr,
       progress,

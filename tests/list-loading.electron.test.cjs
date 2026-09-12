@@ -209,6 +209,56 @@ test('lists follow the selected loading mode for data and visible artwork', { ti
       await setMode(page, 'together')
     })
 
+    await t.test('immediate mode navigates to a blank list and reveals batches while data and covers are still pending', async() => {
+      await setMode(page, 'immediate')
+      await route(page, '/setting?name=SettingList')
+      await page.evaluate(() => {
+        const ipc = require('electron').ipcRenderer, original = ipc.invoke.bind(ipc)
+        ipc.invoke = async(channel, ...args) => {
+          if (channel === 'player_list_music_get' && args[0] === 'immediate-fixture') {
+            window.__waitingForList = true
+            return new Promise(resolve => { window.__releaseList = resolve })
+          }
+          return original(channel, ...args)
+        }
+        window.__restoreImmediateInvoke = () => { ipc.invoke = original }
+      })
+      const first = block('/immediate-first.svg'), second = block('/immediate-second.svg')
+      const initial = songs('immediate', [`${base}/immediate-first.svg`])
+      await route(page, '/list?id=immediate-fixture')
+      await page.waitForFunction(() => window.__waitingForList)
+      assert.match(page.url(), /immediate-fixture/)
+      assert.equal(await rows.count(), 0)
+      assert.equal(await group.getAttribute('aria-busy'), 'true')
+      assert.equal(await group.locator(':scope > [role="status"]').count(), 0)
+      assert.equal(await group.locator(':scope > [inert]').count(), 1)
+      assert.equal(await page.locator('#view [data-motion-outlet]').evaluateAll(elements => elements.some(el => el.getAnimations().length)), true)
+      await page.evaluate(list => window.__releaseList(list), initial)
+      await first.requested
+      await rows.first().waitFor({ state: 'visible' })
+      assert.equal(await rows.locator('[data-cover-image][src]').count(), 0)
+      await page.evaluate(list => {
+        const local = window.__motionComponents().find(c => c.type.name === 'MusicList' && 'list' in c.setupState)
+        local.setupState.isLoading = true
+        local.setupState.list = list
+      }, [...initial, ...songs('immediate-next', [`${base}/immediate-second.svg`])])
+      await second.requested
+      await rows.nth(1).waitFor({ state: 'visible' })
+      assert.equal(await group.getAttribute('aria-busy'), 'true')
+      assert.equal(await rows.first().evaluate(row => !!row.closest('[inert]')), false)
+      first.release()
+      await page.waitForFunction(() => document.querySelector('#view [data-cover-image]')?.naturalWidth === 96)
+      assert.equal(await rows.nth(1).locator('[data-cover-image]').getAttribute('src'), null)
+      second.release()
+      await page.evaluate(() => {
+        window.__motionComponents().find(c => c.type.name === 'MusicList' && 'list' in c.setupState).setupState.isLoading = false
+        window.__restoreImmediateInvoke()
+      })
+      await ready(page)
+      await page.screenshot({ path: path.join(output, 'list-loading-immediate.png') })
+      await setMode(page, 'together')
+    })
+
     await t.test('changing mode releases a pending cover wait and applies to subsequent lists', async() => {
       const old = block('/mode-old.svg')
       await seedLocal(page, songs('mode-old', [`${base}/mode-old.svg`]))
@@ -262,6 +312,32 @@ test('lists follow the selected loading mode for data and visible artwork', { ti
       }), true)
     })
 
+    await t.test('immediate mode reveals playlist cards in batches without flashing loading or empty messages', async() => {
+      await setMode(page, 'immediate')
+      const cover = block('/immediate-card.svg')
+      await page.evaluate(() => {
+        const card = window.__motionComponents().find(c => 'listInfo' in c.props && 'visibleSource' in c.props)
+        Object.assign(card.props.listInfo, { key: 'immediate-cards', list: [], noItemLabel: window.i18n.t('list__loading') })
+        window.__immediateCards = card.props.listInfo
+      })
+      assert.equal(await group.locator('[role="status"]:visible').count(), 0)
+      await page.evaluate(base => {
+        window.__immediateCards.list = [{ id: 'first-card', source: 'wy', name: 'First arriving card', author: 'Fixture', img: `${base}/immediate-card.svg` }]
+      }, base)
+      await cover.requested
+      await page.getByRole('button', { name: 'First arriving card', exact: true }).waitFor()
+      assert.equal(await group.getAttribute('aria-busy'), 'true')
+      await page.evaluate(() => {
+        window.__immediateCards.list = [...window.__immediateCards.list, { id: 'second-card', source: 'wy', name: 'Second arriving card', author: 'Fixture', img: '' }]
+      })
+      await page.getByRole('button', { name: 'Second arriving card', exact: true }).waitFor()
+      assert.equal(await group.locator('[role="status"]:visible').count(), 0)
+      cover.release()
+      await page.evaluate(() => { window.__immediateCards.noItemLabel = '' })
+      await ready(page)
+      await setMode(page, 'together')
+    })
+
     await t.test('online songs and the playlist header cover appear as one group', async() => {
       await route(page, '/songList/detail?source=wy&id=fixture-list')
       await settled(page)
@@ -303,6 +379,31 @@ test('lists follow the selected loading mode for data and visible artwork', { ti
       header.release()
       song.release()
       await page.waitForFunction(() => [...document.querySelectorAll('#view [data-cover-image]')].every(image => image.naturalWidth === 96))
+      await setMode(page, 'together')
+    })
+
+    await t.test('immediate nested details show partial songs and retain final empty and error states', async() => {
+      await setMode(page, 'immediate')
+      await page.evaluate(() => {
+        const detail = window.__motionComponents().find(c => 'listDetailInfo' in c.setupState)
+        window.__immediateDetail = detail.setupState.listDetailInfo
+        Object.assign(window.__immediateDetail, { key: 'immediate-detail', list: [], noItemLabel: window.i18n.t('list__loading') })
+      })
+      assert.equal(await group.locator('[role="status"]:visible').count(), 0)
+      await page.evaluate(list => { window.__immediateDetail.list = list }, songs('partial-detail', [`${base}/fast.svg`]))
+      await rows.first().waitFor({ state: 'visible' })
+      assert.equal(await rows.first().evaluate(row => !!row.closest('[inert]')), false)
+      assert.equal(await group.getAttribute('aria-busy'), 'true')
+      await page.evaluate(() => {
+        window.__immediateDetail.list = []
+        window.__immediateDetail.noItemLabel = window.i18n.t('no_item')
+      })
+      const empty = await page.evaluate(() => window.i18n.t('no_item'))
+      await group.getByText(empty, { exact: true }).waitFor()
+      await page.evaluate(() => { window.__immediateDetail.noItemLabel = window.i18n.t('list__load_failed') })
+      const error = await page.evaluate(() => window.i18n.t('list__load_failed'))
+      await group.getByText(error, { exact: true }).waitFor()
+      assert.equal(await group.locator('.ui-state-retry:visible').count(), 1)
       await setMode(page, 'together')
     })
 
@@ -396,8 +497,16 @@ test('the loading-mode setting is saved through the UI and restored after full r
     })
     await close()
     await start()
-    await t.test('progressive mode survives a restart and can be changed back through the UI', async() => {
+    await t.test('progressive mode survives a restart and the immediate option can be selected', async() => {
       await selected('progressive')
+      assert.equal(await fixture.page.locator('input[name="setting_list_loading_mode"]').count(), 3)
+      await select('immediate')
+      await selected('immediate')
+    })
+    await close()
+    await start()
+    await t.test('immediate mode survives a restart and can be changed back through the UI', async() => {
+      await selected('immediate')
       await select('together')
       await selected('together')
     })

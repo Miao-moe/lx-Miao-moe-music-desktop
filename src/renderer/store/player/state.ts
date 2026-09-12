@@ -44,6 +44,9 @@ export const musicInfo = window.lxData.musicInfo = reactive<PlayerMusicInfo>({
 
 export const isPlay = ref(false)
 
+/** 已加载的播放封面，与歌曲列表共享图片缓存；原始地址仍保留在 musicInfo.pic。 */
+export const playerCover = ref('')
+
 export const status = window.lxData.status = ref('')
 
 export const statusText = ref('')

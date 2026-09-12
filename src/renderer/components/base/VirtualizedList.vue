@@ -26,6 +26,7 @@ import {
   onBeforeUnmount,
 } from 'vue'
 import { listLoadingKey } from '@renderer/utils/compositions/useListLoading'
+import { appSetting } from '@renderer/store/setting'
 
 /**
  * 生成防抖函数
@@ -151,7 +152,7 @@ export default {
 
     const renderView = (start, end) => {
       const current = ++viewRequest
-      requestAnimationFrame(() => {
+      const render = () => {
         if (!dom_scrollContainer.value || current !== viewRequest) return
         views.value = createList(start, end)
         void nextTick(() => {
@@ -159,7 +160,9 @@ export default {
           finishRender?.()
           finishRender = null
         })
-      })
+      }
+      if (appSetting['list.loadingMode'] === 'immediate') render()
+      else requestAnimationFrame(render)
     }
 
     const createList = (startIndex, endIndex) => {
@@ -305,6 +308,7 @@ export default {
       startIndex = -1
       endIndex = -1
       if (cachedList.length) {
+        if (appSetting['list.loadingMode'] === 'immediate') updateView()
         void nextTick(() => {
           requestAnimationFrame(() => {
             updateView()

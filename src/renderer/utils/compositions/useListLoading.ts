@@ -19,7 +19,12 @@ export default (sources: WatchSource[], isLoading: () => boolean) => {
   const check = () => {
     const current = ++revision
     cancelAnimationFrame(frame)
-    if (disposed || ready.value || isLoading() || pending.size) return
+    if (disposed || ready.value) return
+    if (appSetting['list.loadingMode'] === 'immediate') {
+      ready.value = true
+      return
+    }
+    if (isLoading() || pending.size) return
     if (appSetting['list.loadingMode'] !== 'progressive' && pendingCovers.size) return
     void nextTick(() => {
       if (disposed || current !== revision) return

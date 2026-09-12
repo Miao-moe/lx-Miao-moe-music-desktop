@@ -1,5 +1,6 @@
 import { httpFetch } from '../../request'
 import { formatPlayTime, sizeFormate } from '../../index'
+import { readSearchBody } from '../searchFallback'
 
 const getSinger = (singers) => {
   let arr = []
@@ -31,37 +32,38 @@ export default (songmid) => {
       },
     },
   })
-  return requestObj.promise.then(({ body }) => {
+  return requestObj.promise.then(response => {
+    const body = readSearchBody(response)
     // console.log(body)
-    if (body.code != 0 || body.req.code != 0) return Promise.reject(new Error('获取歌曲信息失败'))
+    if (body?.code != 0 || body?.req?.code != 0) return Promise.reject(new Error('获取歌曲信息失败'))
     const item = body.req.data.track_info
     if (!item.file?.media_mid) return null
 
     let types = []
     let _types = {}
     const file = item.file
-    if (file.size_128mp3 != 0) {
+    if (file.size_128mp3 > 0) {
       let size = sizeFormate(file.size_128mp3)
       types.push({ type: '128k', size })
       _types['128k'] = {
         size,
       }
     }
-    if (file.size_320mp3 !== 0) {
+    if (file.size_320mp3 > 0) {
       let size = sizeFormate(file.size_320mp3)
       types.push({ type: '320k', size })
       _types['320k'] = {
         size,
       }
     }
-    if (file.size_flac !== 0) {
+    if (file.size_flac > 0) {
       let size = sizeFormate(file.size_flac)
       types.push({ type: 'flac', size })
       _types.flac = {
         size,
       }
     }
-    if (file.size_hires !== 0) {
+    if (file.size_hires > 0) {
       let size = sizeFormate(file.size_hires)
       types.push({ type: 'flac24bit', size })
       _types.flac24bit = {

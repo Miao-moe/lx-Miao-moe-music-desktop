@@ -24,6 +24,7 @@ const clear = () => {
 }
 
 // Animate the stable outlet without cloning an entire list and its images on every switch.
+// List loading controls content visibility; page motion starts without waiting for its data.
 watch(() => props.motionKey, async() => {
   const token = ++revision
   const live = outlet.value

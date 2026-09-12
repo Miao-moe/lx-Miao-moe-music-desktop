@@ -286,7 +286,7 @@ export const getTheme = () => {
         theme.config.extInfo['--background-image'] =
           isUrl(theme.config.extInfo['--background-image'])
             ? `url(${theme.config.extInfo['--background-image']})`
-            : `url(file:///${encodePath(joinPath(global.lxDataPath, 'theme_images', theme.config.extInfo['--background-image']))})`
+            : `url("${encodePath(joinPath(global.lxDataPath, 'theme_images', theme.config.extInfo['--background-image']))}")`
       }
     } else {
       themeId = global.lx.appSetting['theme.id'] == 'auto' && shouldUseDarkColors ? 'black' : 'green'

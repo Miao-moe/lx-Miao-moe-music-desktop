@@ -4,6 +4,8 @@ import { httpFetch } from '../../request'
 import { formatPlayTime, decodeName } from '../../index'
 // import { debug } from '../../utils/env'
 import { formatSinger } from './util'
+import { assertSearch, readSearchBody, withSearchFallback } from '../searchFallback'
+import { webSearch } from './searchFallback'
 
 export default {
   regExps: {
@@ -16,7 +18,7 @@ export default {
   // cancelFn: null,
   musicSearch(str, page, limit) {
     const musicSearchRequestObj = httpFetch(`http://search.kuwo.cn/r.s?client=kt&all=${encodeURIComponent(str)}&pn=${page - 1}&rn=${limit}&uid=794762570&ver=kwplayer_ar_9.2.2.1&vipver=1&show_copyright_off=1&newver=1&ft=music&cluster=0&strategy=2012&encoding=utf8&rformat=json&vermerge=1&mobi=1&issubtitle=1`)
-    return musicSearchRequestObj.promise
+    return musicSearchRequestObj.promise.then(response => ({ body: readSearchBody(response) }))
   },
   // getImg(songId) {
   //   return httpGet(`http://player.kuwo.cn/webmusic/sj/dtflagdate?flag=6&rid=MUSIC_${songId}`)
@@ -30,6 +32,7 @@ export default {
     // console.log(rawData)
     for (let i = 0; i < rawData.length; i++) {
       const info = rawData[i]
+      assertSearch(info?.MUSICRID && info.SONGNAME)
       let songId = info.MUSICRID.replace('MUSIC_', '')
       // const format = (info.FORMATS || info.formats).split('|')
 
@@ -99,18 +102,20 @@ export default {
     // console.log(result)
     return result
   },
-  search(str, page = 1, limit, retryNum = 0) {
+  search: withSearchFallback(function(str, page, limit) { return this.searchPrimary(str, page, limit) }, [webSearch]),
+  searchPrimary(str, page = 1, limit, retryNum = 0) {
     if (retryNum > 2) return Promise.reject(new Error('try max num'))
     if (limit == null) limit = this.limit
     // http://newlyric.kuwo.cn/newlyric.lrc?62355680
     return this.musicSearch(str, page, limit).then(({ body: result }) => {
       // console.log(result)
-      if (!result || (result.TOTAL !== '0' && result.SHOW === '0')) return this.search(str, page, limit, ++retryNum)
+      if (!result || (result.TOTAL !== '0' && result.SHOW === '0')) return this.searchPrimary(str, page, limit, ++retryNum)
+      assertSearch(Array.isArray(result.abslist))
       let list = this.handleResult(result.abslist)
 
-      if (list == null) return this.search(str, page, limit, ++retryNum)
+      if (list == null) return this.searchPrimary(str, page, limit, ++retryNum)
 
-      this.total = parseInt(result.TOTAL)
+      this.total = result.TOTAL
       this.page = page
       this.allPage = Math.ceil(this.total / limit)
 

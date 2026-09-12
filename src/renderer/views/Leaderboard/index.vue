@@ -1,11 +1,13 @@
 <template>
   <div :class="$style.leaderboard">
-    <div :class="$style.lists">
-      <div :class="$style.listsSelect">
-        <base-selection :model-value="source" :class="$style.select" :list="sourceList" item-key="id" item-name="name" @update:model-value="handleToggleSource" />
+    <common-resizable-sidebar name="leaderboard" :label="$t('leaderboard')">
+      <div :class="$style.lists">
+        <div :class="$style.listsSelect">
+          <base-selection :model-value="source" :class="$style.select" :list="sourceList" item-key="id" item-name="name" @update:model-value="handleToggleSource" />
+        </div>
+        <BoardList ref="boardListRef" :board-id="boardId" :source="source" @show-menu="$refs.musicListRef?.hideMenu()" />
       </div>
-      <BoardList ref="boardListRef" :board-id="boardId" :source="source" @show-menu="$refs.musicListRef?.hideMenu()" />
-    </div>
+    </common-resizable-sidebar>
     <common-motion-view :class="$style.list" :motion-key="`${source}:${boardId}`">
       <MusicList ref="musicListRef" :source="source" :board-id="boardId" @show-menu="$refs.boardListRef?.hideMenu()" />
     </common-motion-view>
@@ -114,8 +116,11 @@ export default {
 }
 
 .lists {
-  flex: none;
-  width: 14.8%;
+  flex: auto;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
   display: flex;
   flex-flow: column nowrap;
 }
@@ -124,6 +129,8 @@ export default {
 }
 
 .listsSelect {
+  box-sizing: border-box;
+  padding-right: var(--panel-sidebar-rail, 0px);
   font-size: 12px;
 
   &:hover {

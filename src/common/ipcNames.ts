@@ -140,6 +140,8 @@ const modules = {
 
     open_api_action: 'open_api_action',
     sync_action: 'sync_action',
+    webdav_action: 'webdav_action',
+    webdav_last_result: 'webdav_last_result',
     sync_get_server_devices: 'sync_get_server_devices',
     sync_remove_server_device: 'sync_remove_server_device',
 

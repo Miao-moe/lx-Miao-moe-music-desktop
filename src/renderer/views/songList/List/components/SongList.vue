@@ -1,6 +1,6 @@
 <template>
-  <common-list-loading :load-key="props.listInfo.list" :loading="isMessage(props.listInfo.noItemLabel, 'list__loading')" :class="$style.container">
-    <div v-show="!props.listInfo.noItemLabel" ref="dom_list_ref" :class="$style.listContent" class="scroll">
+  <common-list-loading :load-key="props.listInfo.list" :loading="isLoading" :class="$style.container">
+    <div v-show="!props.listInfo.noItemLabel || (immediate && isLoading && props.listInfo.list.length)" ref="dom_list_ref" :class="$style.listContent" class="scroll">
       <ul>
         <li
           v-for="(item, index) in props.listInfo.list" :key="getItemKey(item)" :class="$style.item" role="button" tabindex="0"
@@ -32,7 +32,7 @@
       </div>
     </div>
     <div
-      v-show="props.listInfo.noItemLabel" :class="[$style.noitem, 'ui-state', { 'ui-state-error': isMessage(props.listInfo.noItemLabel, 'list__load_failed') }]"
+      v-show="props.listInfo.noItemLabel && !(immediate && isLoading)" :class="[$style.noitem, 'ui-state', { 'ui-state-error': isMessage(props.listInfo.noItemLabel, 'list__load_failed') }]"
       role="status" :aria-busy="isMessage(props.listInfo.noItemLabel, 'list__loading')"
     >
       <span v-if="isMessage(props.listInfo.noItemLabel, 'list__loading')" class="ui-spinner" />
@@ -43,7 +43,8 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from '@common/utils/vueTools'
+import { computed, reactive, ref } from '@common/utils/vueTools'
+import { appSetting } from '@renderer/store/setting'
 import type { ListInfo, ListInfoItem } from '@renderer/store/songList/state'
 import { useRoute, useRouter } from '@common/utils/vueRouter'
 
@@ -66,6 +67,8 @@ const dom_list_ref = ref<HTMLElement | null>(null)
 const imageErrorSet = reactive(new Set<string>())
 const getItemKey = (item: ListInfoItem) => `${item.source}__${item.id}`
 const isMessage = (text: string, key: 'list__loading' | 'list__load_failed') => Object.values(window.i18n.messages).some(messages => messages[key] == text)
+const isLoading = computed(() => isMessage(props.listInfo.noItemLabel, 'list__loading'))
+const immediate = computed(() => appSetting['list.loadingMode'] === 'immediate')
 
 const emit = defineEmits(['toggle-page', 'retry'])
 

@@ -1,6 +1,8 @@
 import { httpFetch } from '../../request'
 import { sizeFormate, formatPlayTime } from '../../index'
 import { toMD5, formatSingerName } from '../utils'
+import { assertSearch, readSearchBody, withSearchFallback } from '../searchFallback'
+import { legacySearch, pcSearch } from './searchFallback'
 
 export const createSignature = (time, str) => {
   const deviceId = '963B7AA0D21511ED807EE5846EC87D20'
@@ -122,7 +124,7 @@ export default {
         'User-Agent': 'Mozilla/5.0 (Linux; U; Android 11.0.0; zh-cn; MI 11 Build/OPR1.170623.032) AppleWebKit/534.30 (KHTML, like Gecko) Version/4.0 Mobile Safari/534.30',
       },
     })
-    return searchRequest.promise.then(({ body }) => body)
+    return searchRequest.promise.then(readSearchBody)
   },
   filterData(rawData) {
     // console.log(rawData)
@@ -171,7 +173,7 @@ export default {
         })
 
         let img = data.img3 || data.img2 || data.img1 || null
-        if (img && !/https?:/.test(data.img3)) img = 'http://d.musicapp.migu.cn' + img
+        if (img && !/^https?:/.test(img)) img = 'http://d.musicapp.migu.cn' + img
 
         list.push({
           singer: formatSingerName(data.singerList),
@@ -195,19 +197,21 @@ export default {
     })
     return list
   },
-  search(str, page = 1, limit, retryNum = 0) {
+  search: withSearchFallback(function(str, page, limit) { return this.searchPrimary(str, page, limit) }, [legacySearch, pcSearch]),
+  searchPrimary(str, page = 1, limit, retryNum = 0) {
     if (++retryNum > 3) return Promise.reject(new Error('try max num'))
     if (limit == null) limit = this.limit
     // http://newlyric.kuwo.cn/newlyric.lrc?62355680
     return this.musicSearch(str, page, limit).then(result => {
       // console.log(result)
       if (!result || result.code !== '000000') return Promise.reject(new Error(result ? result.info : '搜索失败'))
-      const songResultData = result.songResultData || { resultList: [], totalCount: 0 }
+      const songResultData = result.songResultData
+      assertSearch(Array.isArray(songResultData?.resultList))
 
       let list = this.filterData(songResultData.resultList)
-      if (list == null) return this.search(str, page, limit, retryNum)
+      if (list == null) return this.searchPrimary(str, page, limit, retryNum)
 
-      this.total = parseInt(songResultData.totalCount)
+      this.total = songResultData.totalCount
       this.page = page
       this.allPage = Math.ceil(this.total / limit)
 

@@ -62,7 +62,7 @@ const parseTools = {
       if (!times) continue
       times = times.map(time => {
         const result = /\((\d+),(\d+)\)/.exec(time)
-        return `<${Math.max(parseInt(result[1]) - startMsTime, 0)},${result[2]}>`
+        return `<${Math.trunc(Math.max(parseInt(result[1]) - startMsTime, 0))},${result[2]}>`
       })
       const wordArr = words.split(this.rxps.wordTime)
       const newWords = times.map((time, index) => `${time}${wordArr[index]}`).join('')
@@ -100,12 +100,8 @@ const parseTools = {
     return str.replace(/^[\S\s]*?LyricContent="/, '').replace(/"\/>[\S\s]*?$/, '')
   },
   getIntv(interval) {
-    if (!interval) return 0
-    if (!interval.includes('.')) interval += '.0'
-    let arr = interval.split(/:|\./)
-    while (arr.length < 3) arr.unshift('0')
-    const [m, s, ms] = arr
-    return parseInt(m) * 3600000 + parseInt(s) * 1000 + parseInt(ms)
+    const [seconds, fraction = '0'] = interval.split('.')
+    return seconds.split(':').reduce((total, value) => total * 60 + parseInt(value), 0) * 1000 + parseInt(fraction.padEnd(3, '0'))
   },
   fixRlrcTimeTag(rlrc, lrc) {
     // console.log(lrc)

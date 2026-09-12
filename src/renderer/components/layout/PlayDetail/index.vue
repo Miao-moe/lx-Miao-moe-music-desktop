@@ -5,7 +5,7 @@
     :inert="!isShowPlayerDetail ? '' : null" @contextmenu="handleContextMenu"
   >
     <div :class="$style.bg" />
-    <AmbientBackground v-if="visibled" :cover="musicInfo.pic" />
+    <AmbientBackground v-if="visibled" :cover="playerCover" />
     <ControlBtnsLeftHeader v-if="appSetting['common.controlBtnPosition'] == 'left'" data-detail-part="chrome" />
     <ControlBtnsRightHeader v-else data-detail-part="chrome" />
     <component :is="pluginPlayDetail" v-if="visibled && pluginPlayDetail && !isShowPlayComment && !isShowLrcSelectContent" :class="$style.main" data-detail-part="lyrics" />
@@ -13,13 +13,26 @@
       <div class="left" :class="$style.left">
         <div :class="$style.info">
           <img
-            v-if="musicInfo.pic" ref="detailCover" :class="[$style.img, {[$style.coverTravelling]: coverTravelling}]" :src="musicInfo.pic"
+            v-if="playerCover" ref="detailCover" :class="[$style.img, {[$style.coverTravelling]: coverTravelling}]" :src="playerCover"
             @mousemove="handleCoverMove" @mouseleave="resetCoverTilt"
           >
           <div class="description scroll" :class="$style.description" data-detail-part="info">
             <p>{{ $t('player__music_name') }}{{ musicInfo.name }}</p>
-            <p>{{ $t('player__music_singer') }}{{ musicInfo.singer }}</p>
-            <p v-if="musicInfo.album">{{ $t('player__music_album') }}{{ musicInfo.album }}</p>
+            <p>
+              {{ $t('player__music_singer') }}
+              <template v-if="canNavigateEntity && singerNames.length">
+                <template v-for="(singer, index) in singerNames" :key="`${singer}__${index}`">
+                  <span v-if="index">、</span>
+                  <button type="button" :class="$style.entityLink" @click.stop="handleOpenEntity('singer', singer)" @keydown.stop @keyup.stop>{{ singer }}</button>
+                </template>
+              </template>
+              <template v-else>{{ musicInfo.singer }}</template>
+            </p>
+            <p v-if="musicInfo.album">
+              {{ $t('player__music_album') }}
+              <button v-if="canNavigateEntity" type="button" :class="$style.entityLink" @click.stop="handleOpenEntity('album', musicInfo.album)" @keydown.stop @keyup.stop>{{ musicInfo.album }}</button>
+              <template v-else>{{ musicInfo.album }}</template>
+            </p>
           </div>
         </div>
       </div>
@@ -36,6 +49,7 @@
 import { computed, watch } from '@common/utils/vueTools'
 import { pluginRuntime } from '@renderer/store/optionalPlugins'
 import usePlayerDetailMotion from '@renderer/utils/compositions/usePlayerDetailMotion'
+import useEntityDetailNavigation from '@renderer/utils/compositions/useEntityDetailNavigation'
 import AmbientBackground from './AmbientBackground.vue'
 import { isFullscreen } from '@renderer/store'
 import {
@@ -43,6 +57,7 @@ import {
   isShowPlayComment,
   isShowLrcSelectContent,
   musicInfo,
+  playerCover,
   playMusicInfo,
 } from '@renderer/store/player/state'
 import {
@@ -71,10 +86,22 @@ export default {
   },
   setup() {
     const pluginPlayDetail = computed(() => Object.values(pluginRuntime.playDetails).find(detail => detail?.enabled.value)?.component)
+    const { canOpenEntity, getSingerNames, openEntityDetail } = useEntityDetailNavigation()
+    const entityMusicInfo = computed(() => {
+      const info = playMusicInfo.musicInfo
+      return info && 'progress' in info ? info.metadata.musicInfo : info
+    })
+    const canNavigateEntity = computed(() => !!entityMusicInfo.value && canOpenEntity(entityMusicInfo.value))
+    const singerNames = computed(() => entityMusicInfo.value ? getSingerNames(entityMusicInfo.value) : [])
     let clickTime = 0
 
     const hide = () => {
       setShowPlayerDetail(false)
+    }
+    const handleOpenEntity = (type, name) => {
+      if (!canNavigateEntity.value || !name) return
+      openEntityDetail(entityMusicInfo.value, type, name)
+      hide()
     }
     const handleContextMenu = () => {
       if (window.performance.now() - clickTime > 400) {
@@ -115,6 +142,10 @@ export default {
       pluginPlayDetail,
       isShowPlayComment,
       musicInfo,
+      playerCover,
+      canNavigateEntity,
+      singerNames,
+      handleOpenEntity,
       hide,
       handleContextMenu,
       hideComment,
@@ -289,6 +320,25 @@ export default {
     font-size: 14px;
     overflow-wrap: break-word;
   }
+}
+.entityLink {
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  outline: none;
+  transition: color var(--duration-fast);
+  &:hover, &:focus-visible {
+    color: var(--color-primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  &:focus-visible { box-shadow: var(--focus-ring); }
 }
 
 

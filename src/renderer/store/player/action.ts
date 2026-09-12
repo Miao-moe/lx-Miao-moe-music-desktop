@@ -22,6 +22,7 @@ import { playQueueById, resetRandomNextMusicInfo } from '@renderer/core/player'
 import { LIST_IDS } from '@common/constants'
 import { toRaw } from '@common/utils/vueTools'
 import showToast from '@renderer/plugins/Toast'
+import { getCachedCoverUrl } from '@renderer/utils/musicCover'
 
 
 type PlayerMusicInfoKeys = keyof typeof musicInfo
@@ -179,7 +180,7 @@ const setPlayerMusicInfo = (musicInfo: LX.Music.MusicInfo | LX.Download.ListItem
   if (musicInfo) {
     setMusicInfo('progress' in musicInfo ? {
       id: musicInfo.id,
-      pic: musicInfo.metadata.musicInfo.meta.picUrl,
+      pic: getCachedCoverUrl(musicInfo),
       name: musicInfo.metadata.musicInfo.name,
       singer: musicInfo.metadata.musicInfo.singer,
       album: musicInfo.metadata.musicInfo.meta.albumName ?? '',
@@ -190,7 +191,7 @@ const setPlayerMusicInfo = (musicInfo: LX.Music.MusicInfo | LX.Download.ListItem
       rawlrc: null,
     } : {
       id: musicInfo.id,
-      pic: musicInfo.meta.picUrl,
+      pic: getCachedCoverUrl(musicInfo),
       name: musicInfo.name,
       singer: musicInfo.singer,
       album: musicInfo.meta.albumName ?? '',

@@ -1,5 +1,5 @@
 <template>
-  <common-list-loading :load-key="listDetailInfo.list" :class="$style.container">
+  <common-list-loading :load-key="listDetailInfo.list" :loading="isLoading" :class="$style.container">
     <div :class="$style.songListHeader">
       <div :class="$style.songListHeaderLeft">
         <common-cover-image v-if="(picUrl || listDetailInfo.info.img) && !coverError" :src="picUrl || listDetailInfo.info.img" :size="80" :alt="listDetailInfo.info.name" @error="coverError = true" />
@@ -44,7 +44,7 @@
 </template>
 
 <script lang="ts">
-import { ref, watch } from '@common/utils/vueTools'
+import { computed, ref, watch } from '@common/utils/vueTools'
 import { listDetailInfo } from '@renderer/store/songList/state'
 import { setVisibleListDetail } from '@renderer/store/songList/action'
 import { useRouter } from '@common/utils/vueRouter'
@@ -111,6 +111,7 @@ export default {
   setup() {
     const router = useRouter()
     const coverError = ref(false)
+    const isLoading = computed(() => Object.values(window.i18n.messages).some(messages => messages.list__loading === listDetailInfo.noItemLabel))
 
     const {
       listRef,
@@ -160,6 +161,7 @@ export default {
       handleRetry,
       addSongListDetail,
       coverError,
+      isLoading,
       playSongListDetail,
       handlePlayList,
       handleBack,

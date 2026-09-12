@@ -1,18 +1,18 @@
-import { ref, onMounted, onBeforeUnmount, watch, nextTick } from '@common/utils/vueTools'
-import { throttle, formatPlayTime2 } from '@common/utils/common'
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from '@common/utils/vueTools'
+import { formatPlayTime2 } from '@common/utils/common'
 import { scrollTo } from '@common/utils/renderer'
 import { isMotionEnabled, scrollWithSpring } from '@renderer/utils/motion'
 import { play } from '@renderer/core/player/action'
 import { appSetting } from '@renderer/store/setting'
-// import { player as eventPlayerNames } from '@renderer/event/names'
 
-export default ({ isPlay, lyric, playProgress, isShowLyricProgressSetting, offset }) => {
+export default ({ isPlay, lyric, playProgress, musicInfo, isShowLyricProgressSetting }) => {
   const dom_lyric = ref(null)
   const dom_lyric_text = ref(null)
-  const dom_skip_line = ref(null)
   const isMsDown = ref(false)
   const isStopScroll = ref(false)
-  const timeStr = ref('--/--')
+  const seekTime = ref(null)
+  const timeStr = computed(() => seekTime.value == null ? '--:--' : formatPlayTime2(seekTime.value))
+  const canSeek = computed(() => seekTime.value != null)
 
   let msDownY = 0
   let msDownScrollY = 0
@@ -20,20 +20,21 @@ export default ({ isPlay, lyric, playProgress, isShowLyricProgressSetting, offse
   let cancelScrollFn
   let dom_lines
   let isSetedLines = false
-  let point = {
-    x: null,
-    y: null,
-  }
-  let time = -1
-  let dom_pre_line = null
   let isSkipMouseEnter = false
+  let isSkipFocused = false
+  let seekFrame = null
+  let resizeObserver
+  let delayScrollTimeout
 
   const handleSkipPlay = () => {
-    if (time == -1) return
-    handleSkipMouseLeave()
-    isStopScroll.value = false
+    // Recalculate on click as scrolling, resizing or lyric offsets may have changed.
+    updateSeekTime()
+    const time = seekTime.value
+    if (time == null) return
+    resetManualScroll()
     window.app_event.setProgress(time)
     if (!isPlay.value) play()
+    nextTick(() => handleScrollLrc())
   }
   const handleSkipMouseEnter = () => {
     isSkipMouseEnter = true
@@ -43,47 +44,73 @@ export default ({ isPlay, lyric, playProgress, isShowLyricProgressSetting, offse
     isSkipMouseEnter = false
     startLyricScrollTimeout()
   }
+  const handleSkipFocus = () => {
+    isSkipFocused = true
+    clearLyricScrollTimeout()
+  }
+  const handleSkipBlur = () => {
+    isSkipFocused = false
+    startLyricScrollTimeout()
+  }
 
-  const throttleSetTime = throttle(() => {
-    if (!dom_skip_line.value) return
-    const rect = dom_skip_line.value.getBoundingClientRect()
-    point.x = rect.x
-    point.y = rect.y
-    let dom = document.elementFromPoint(point.x, point.y)
-    if (!dom) return
-    if (dom_pre_line === dom) return
-    if (dom.tagName == 'SPAN') {
-      dom = dom.parentNode.parentNode
-    } else if (dom.classList.contains('line')) {
-      dom = dom.parentNode
+  const updateSeekTime = () => {
+    const container = dom_lyric.value
+    if (!isShowLyricProgressSetting.value || !isStopScroll.value || !musicInfo.id || !container || !dom_lines?.length || !lyric.lines.length) {
+      seekTime.value = null
+      return
     }
-    if (dom.time == null) {
-      if (lyric.lines.length) {
-        time = dom.classList.contains('pre') ? 0 : lyric.lines[lyric.lines.length - 1].time ?? 0
-        time = Math.max(time - lyric.offset - lyric.tempOffset, 0)
-        time /= 1000
-        if (time > playProgress.maxPlayTime) time = playProgress.maxPlayTime
-        timeStr.value = formatPlayTime2(time)
-      } else {
-        time = -1
-        timeStr.value = '--:--'
-      }
-    } else {
-      time = dom.time
-      time = Math.max(time - lyric.offset - lyric.tempOffset, 0)
-      time /= 1000
-      if (time > playProgress.maxPlayTime) time = playProgress.maxPlayTime
-      timeStr.value = formatPlayTime2(time)
+    const rect = container.getBoundingClientRect()
+    if (!rect.height) {
+      seekTime.value = null
+      return
     }
-    dom_pre_line = dom
-  })
+    const center = rect.top + rect.height / 2
+    // Use complete row bounds, including wrapped lines and translations. Hit testing
+    // the left edge can land on blank space and incorrectly select the last lyric.
+    let low = 0
+    let high = Math.min(dom_lines.length, lyric.lines.length) - 1
+    while (low < high) {
+      const mid = (low + high) >> 1
+      if (dom_lines[mid].getBoundingClientRect().bottom <= center) low = mid + 1
+      else high = mid
+    }
+    const lineTime = lyric.lines[low].time
+    if (!Number.isFinite(lineTime)) {
+      seekTime.value = null
+      return
+    }
+    const time = Math.max((lineTime - lyric.offset - lyric.tempOffset) / 1000, 0)
+    const duration = playProgress.maxPlayTime
+    seekTime.value = duration > 0 && Number.isFinite(duration) ? Math.min(time, duration) : time
+  }
   const setTime = () => {
-    if (isShowLyricProgressSetting.value) throttleSetTime()
+    if (!isStopScroll.value) return
+    if (seekFrame != null) return
+    seekFrame = window.requestAnimationFrame(() => {
+      seekFrame = null
+      updateSeekTime()
+    })
+  }
+  const cancelAutoScroll = () => {
+    cancelScrollFn?.()
+    cancelScrollFn = null
+    clearTimeout(delayScrollTimeout)
+    delayScrollTimeout = null
+  }
+  const resetManualScroll = () => {
+    clearLyricScrollTimeout()
+    isStopScroll.value = false
+    isMsDown.value = false
+    isSkipMouseEnter = false
+    isSkipFocused = false
+    seekTime.value = null
+    if (seekFrame != null) window.cancelAnimationFrame(seekFrame)
+    seekFrame = null
   }
 
   const handleScrollLrc = (duration = 300) => {
     if (!dom_lines?.length || !dom_lyric.value) return
-    if (isSkipMouseEnter) return
+    if (isSkipMouseEnter || isSkipFocused) return
     if (isStopScroll.value) return
     let dom_p = dom_lines[lyric.line]
     cancelScrollFn?.()
@@ -99,27 +126,24 @@ export default ({ isPlay, lyric, playProgress, isShowLyricProgressSetting, offse
   }
   const startLyricScrollTimeout = () => {
     clearLyricScrollTimeout()
-    if (isSkipMouseEnter) return
+    if (isSkipMouseEnter || isSkipFocused || isMsDown.value || !isStopScroll.value) return
     timeout = setTimeout(() => {
       timeout = null
-      isStopScroll.value = false
+      resetManualScroll()
       if (!isPlay.value) return
       handleScrollLrc()
     }, 3000)
   }
   const handleLyricDown = (y) => {
-    cancelScrollFn?.()
-    cancelScrollFn = null
-    // console.log(event)
-    if (delayScrollTimeout) {
-      clearTimeout(delayScrollTimeout)
-      delayScrollTimeout = null
-    }
+    if (!dom_lyric.value) return
+    cancelAutoScroll()
+    clearLyricScrollTimeout()
     isMsDown.value = true
     msDownY = y
     msDownScrollY = dom_lyric.value.scrollTop
   }
   const handleLyricMouseDown = event => {
+    if (event.button !== 0) return
     handleLyricDown(event.clientY)
   }
   const handleLyricTouchStart = event => {
@@ -128,16 +152,15 @@ export default ({ isPlay, lyric, playProgress, isShowLyricProgressSetting, offse
       handleLyricDown(touch.clientY)
     }
   }
-  const handleMouseMsUp = event => {
+  const handleMouseMsUp = () => {
+    if (!isMsDown.value) return
     isMsDown.value = false
+    startLyricScrollTimeout()
   }
   const handleMove = (y) => {
     if (isMsDown.value) {
       isStopScroll.value ||= true
-      if (cancelScrollFn) {
-        cancelScrollFn()
-        cancelScrollFn = null
-      }
+      cancelAutoScroll()
       dom_lyric.value.scrollTop = msDownScrollY + msDownY - y
       startLyricScrollTimeout()
       setTime()
@@ -154,13 +177,12 @@ export default ({ isPlay, lyric, playProgress, isShowLyricProgressSetting, offse
   }
 
   const handleWheel = (event) => {
-    console.log(event.deltaY)
+    if (!dom_lyric.value || !event.deltaY || event.ctrlKey) return
+    event.preventDefault()
     isStopScroll.value ||= true
-    if (cancelScrollFn) {
-      cancelScrollFn()
-      cancelScrollFn = null
-    }
-    dom_lyric.value.scrollTop = dom_lyric.value.scrollTop + event.deltaY
+    cancelAutoScroll()
+    const unit = event.deltaMode === 1 ? parseFloat(window.getComputedStyle(dom_lyric.value).fontSize) : event.deltaMode === 2 ? dom_lyric.value.clientHeight : 1
+    dom_lyric.value.scrollTop += event.deltaY * unit
     startLyricScrollTimeout()
     setTime()
   }
@@ -192,27 +214,25 @@ export default ({ isPlay, lyric, playProgress, isShowLyricProgressSetting, offse
         handleScrollLrc()
       }
       isSetedLines = false
+      setTime()
     })
   }
 
-  const initLrc = (lines, oLines) => {
+  const initLrc = (lines) => {
     isSetedLines = true
-    if (oLines) {
-      if (lines.length) {
-        setLyric(lines)
-      } else {
-        cancelScrollFn = scrollTo(dom_lyric.value, 0, 300, () => {
-          if (lyric.lines !== lines) return
-          setLyric(lines)
-        }, 50)
-      }
-    } else {
-      setLyric(lines)
+    seekTime.value = null
+    if (!lines.length) {
+      cancelAutoScroll()
+      resetManualScroll()
+      if (dom_lyric.value) dom_lyric.value.scrollTop = 0
     }
+    // Clear old rows immediately: a new wheel/drag can cancel a scroll animation.
+    setLyric(lines)
   }
 
-  let delayScrollTimeout
   const scrollLine = (line, oldLine) => {
+    clearTimeout(delayScrollTimeout)
+    delayScrollTimeout = null
     if (line < 0) return
     if (isSetedLines) return
     if (oldLine == null || line - oldLine != 1) return handleScrollLrc()
@@ -229,39 +249,56 @@ export default ({ isPlay, lyric, playProgress, isShowLyricProgressSetting, offse
 
   watch(() => lyric.lines, initLrc)
   watch(() => lyric.line, scrollLine)
+  watch(() => musicInfo.id, () => {
+    cancelAutoScroll()
+    resetManualScroll()
+  })
+  watch(isShowLyricProgressSetting, enabled => {
+    if (!enabled) resetManualScroll()
+  })
+  watch(() => [lyric.offset, lyric.tempOffset, playProgress.maxPlayTime], setTime)
 
   onMounted(() => {
     document.addEventListener('mousemove', handleMouseMsMove)
     document.addEventListener('mouseup', handleMouseMsUp)
     document.addEventListener('touchmove', handleTouchMove)
     document.addEventListener('touchend', handleMouseMsUp)
+    document.addEventListener('touchcancel', handleMouseMsUp)
+    dom_lyric.value.addEventListener('scroll', setTime, { passive: true })
+    resizeObserver = new window.ResizeObserver(setTime)
+    resizeObserver.observe(dom_lyric.value)
+    resizeObserver.observe(dom_lyric_text.value)
 
-    initLrc(lyric.lines, null)
+    initLrc(lyric.lines)
   })
 
   onBeforeUnmount(() => {
-    cancelScrollFn?.()
-    clearLyricScrollTimeout()
-    clearTimeout(delayScrollTimeout)
+    cancelAutoScroll()
+    resetManualScroll()
+    resizeObserver?.disconnect()
+    dom_lyric.value?.removeEventListener('scroll', setTime)
     document.removeEventListener('mousemove', handleMouseMsMove)
     document.removeEventListener('mouseup', handleMouseMsUp)
     document.removeEventListener('touchmove', handleTouchMove)
     document.removeEventListener('touchend', handleMouseMsUp)
+    document.removeEventListener('touchcancel', handleMouseMsUp)
   })
 
   return {
     dom_lyric,
     dom_lyric_text,
-    dom_skip_line,
     isStopScroll,
     isMsDown,
     timeStr,
+    canSeek,
     handleLyricMouseDown,
     handleLyricTouchStart,
     handleWheel,
     handleSkipPlay,
     handleSkipMouseEnter,
     handleSkipMouseLeave,
+    handleSkipFocus,
+    handleSkipBlur,
     handleScrollLrc,
   }
 }

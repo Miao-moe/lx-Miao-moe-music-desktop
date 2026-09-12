@@ -6,7 +6,7 @@ import {
 } from '@renderer/utils/cookieManager'
 import { deduplicationList, toNewMusicInfo } from '@renderer/utils'
 import musicSdk from '@renderer/utils/musicSdk'
-import { linuxapi } from '@renderer/utils/musicSdk/wy/utils/crypto'
+import { eapi } from '@renderer/utils/musicSdk/wy/utils/crypto'
 import { toMD5 } from '@renderer/utils/musicSdk/utils'
 import { httpFetch } from '@renderer/utils/request'
 
@@ -50,24 +50,45 @@ export interface RemotePlaylist {
   raw?: any
 }
 
-export const wyLinuxForward = async(cookie: string, api: string, params: Record<string, any>) => {
-  const { statusCode, body } = await fetchResponse('https://music.163.com/api/linux/forward', {
+export class CookieLoginError extends Error {
+  constructor(source: CookieSource) {
+    super(`${source} cookie: login expired`)
+  }
+}
+
+// Client MUSIC_U sessions can be valid for eapi while web/Linux account queries return null.
+// Keep account checks, playlist reads and writes on the same authenticated transport.
+export const wyEapiRequest = async(cookie: string, api: string, params: Record<string, any>) => {
+  const musicU = getCookieValue(cookie, 'MUSIC_U')
+  if (!musicU) throw new CookieLoginError('wy')
+  const header = {
+    os: 'pc',
+    appver: '3.1.17.204416',
+    MUSIC_U: musicU,
+    __csrf: getCookieValue(cookie, '__csrf') ?? '',
+    requestId: `${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+  }
+  const { body } = await fetchResponse(`https://interfacepc.music.163.com${api.replace(/^\/api\//, '/eapi/')}`, {
     method: 'post',
+    timeout: 15000,
     headers: {
-      'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.90 Safari/537.36',
-      Cookie: cookie,
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      Referer: 'https://music.163.com/',
+      Origin: 'https://music.163.com',
+      Cookie: Object.entries(header).map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('; '),
     },
-    form: linuxapi({ method: 'POST', url: `https://music.163.com${api}`, params }),
+    form: eapi(api, { ...params, header, e_r: false }),
   })
-  if (statusCode !== 200 || body?.code !== 200) throw new Error(`wy api: ${api} failed (${body?.code ?? statusCode})`)
+  if (body?.code === 301) throw new CookieLoginError('wy')
+  if (body?.code !== 200) throw new Error(`wy api: ${api} failed (${body?.code ?? 'unknown'})`)
   return body
 }
 
 const getWyPlaylists = async(cookie: string): Promise<RemotePlaylist[]> => {
-  const account = await wyLinuxForward(cookie, '/api/w/nuser/account/get', {})
+  const account = await wyEapiRequest(cookie, '/api/nuser/account/get', {})
   const uid = account?.account?.id ?? account?.profile?.userId
-  if (!uid) throw new Error('wy cookie: login expired')
-  const body = await wyLinuxForward(cookie, '/api/user/playlist', { uid: String(uid), limit: 1000, offset: 0 })
+  if (!uid) throw new CookieLoginError('wy')
+  const body = await wyEapiRequest(cookie, '/api/user/playlist', { uid: String(uid), limit: 1000, offset: 0 })
   if (!Array.isArray(body?.playlist)) throw new Error('wy: failed to load playlists')
   return body.playlist
     .filter((item: any) => String(item?.creator?.userId) === String(uid))
@@ -76,7 +97,7 @@ const getWyPlaylists = async(cookie: string): Promise<RemotePlaylist[]> => {
 }
 
 const getWySongs = async(cookie: string, id: string): Promise<LX.Music.MusicInfo[]> => {
-  const body = await wyLinuxForward(cookie, '/api/v3/playlist/detail', { id, n: 100000, s: 8 })
+  const body = await wyEapiRequest(cookie, '/api/v3/playlist/detail', { id, n: 100000, s: 8 })
   if (!body?.playlist?.tracks) throw new Error('wy: failed to load playlist songs')
   return deduplicationList(musicSdk.wy.songList.filterListDetail(body).map(toNewMusicInfo))
 }
@@ -300,8 +321,7 @@ export const checkCookiePlaylists = async(source: CookieSource): Promise<CookieP
     const playlists = await getRemotePlaylists(source, cookie)
     return { source, status: 'success', listCount: playlists.length }
   } catch (error) {
-    const message = error instanceof Error ? error.message : ''
-    const status = message.includes('login expired') ? 'login_expired' : 'failed'
+    const status = error instanceof CookieLoginError ? 'login_expired' : 'failed'
     return { source, status, listCount: 0 }
   }
 }

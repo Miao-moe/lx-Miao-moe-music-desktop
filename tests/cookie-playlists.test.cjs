@@ -38,7 +38,7 @@ function fixture({ sources = Object.keys(cookies), respond, sdk = {} } = {}) {
     '@renderer/utils/cookieManager': manager,
     '@renderer/utils': { deduplicationList: items => items, toNewMusicInfo: item => item },
     '@renderer/utils/musicSdk': sdk,
-    '@renderer/utils/musicSdk/wy/utils/crypto': { linuxapi: data => data },
+    '@renderer/utils/musicSdk/wy/utils/crypto': { eapi: (url, params) => ({ url, params }) },
     '@renderer/utils/musicSdk/utils': { toMD5: () => 'test-signature' },
     '@renderer/utils/request': {
       httpFetch(url, options) {
@@ -100,6 +100,19 @@ test('anonymous tracking and CSRF cookies are not treated as playlist login cred
 test('an expired NetEase login is distinguished from an empty playlist collection', async() => {
   const { sync } = fixture({ respond: () => response({ code: 200, account: null, profile: null }) })
   assert.equal((await sync.checkCookiePlaylists('wy')).status, 'login_expired')
+})
+
+test('NetEase personal playlist checks authenticate client cookies and recognize explicit expiry', async() => {
+  const { sync, requests } = fixture({ sources: ['wy'], respond: (url, options) => {
+    if (url.endsWith('/api/linux/forward')) return response({ code: 200, account: null, profile: null })
+    assert.equal(new URL(url).origin, 'https://interfacepc.music.163.com')
+    assert.equal(options.form.params.header.MUSIC_U, 'test-session')
+    return playlistResponse(url, options)
+  } })
+  assert.equal((await sync.checkCookiePlaylists('wy')).status, 'success')
+  assert.equal(requests.length, 2)
+  const expired = fixture({ sources: ['wy'], respond: () => response({ code: 301 }) })
+  assert.equal((await expired.sync.checkCookiePlaylists('wy')).status, 'login_expired')
 })
 
 test('HTTP errors, malformed responses and network failures are never reported as empty success', async() => {

@@ -1,6 +1,7 @@
 import { markRawList } from '@common/utils/vueTools'
 import music from '@renderer/utils/musicSdk'
 import { sortInsert, similar } from '@common/utils/common'
+import { appSetting } from '@renderer/store/setting'
 import type { EntityType, ListInfoItem, SearchSource } from './state'
 import { listInfos, sources } from './state'
 
@@ -11,6 +12,8 @@ interface SearchResult {
   total: number
   source: LX.OnlineSource
 }
+
+const requests = new WeakMap<object, symbol>()
 
 const handleSortList = (list: ListInfoItem[], keyword: string) => {
   const result: Array<{ num: number, data: ListInfoItem }> = []
@@ -23,7 +26,7 @@ const handleSortList = (list: ListInfoItem[], keyword: string) => {
   return result.map(item => item.data).reverse()
 }
 
-const setLists = (type: EntityType, results: SearchResult[], page: number, text: string) => {
+const setLists = (type: EntityType, results: SearchResult[], page: number, text: string, pending = false) => {
   const totals: number[] = []
   let limit = 0
   let list: ListInfoItem[] = []
@@ -48,7 +51,7 @@ const setLists = (type: EntityType, results: SearchResult[], page: number, text:
   else listInfo.total = limit * page
   listInfo.page = page
   listInfo.list = handleSortList(list, text)
-  listInfo.noItemLabel = text && !list.length && page == 1 ? window.i18n.t('no_item') : ''
+  listInfo.noItemLabel = pending ? window.i18n.t('list__loading') : text && !list.length && page == 1 ? window.i18n.t('no_item') : ''
   return listInfo.list
 }
 
@@ -66,6 +69,7 @@ const setList = (type: EntityType, data: SearchResult, page: number, text: strin
 export const resetListInfo = (type: EntityType, sourceId: SearchSource): [] => {
   const listInfo = listInfos[type][sourceId]
   if (!listInfo) return []
+  requests.delete(listInfo)
   listInfo.page = 1
   listInfo.total = 0
   listInfo.list = []
@@ -78,8 +82,13 @@ export const search = async(type: EntityType, text: string, page: number, source
   const listInfo = listInfos[type][sourceId]!
   if (!text) return resetListInfo(type, sourceId)
   const key = `${type}__${page}__${sourceId}__${text}`
-  if (listInfo.key == key && listInfo.list.length) return listInfo.list
+  if (!requests.has(listInfo) && listInfo.key == key && listInfo.list.length) return listInfo.list
+  const requestId = Symbol('search')
+  requests.set(listInfo, requestId)
+  const isCurrent = () => requests.get(listInfo) === requestId
+  const finish = () => { if (isCurrent()) requests.delete(listInfo) }
 
+  listInfo.list = []
   listInfo.noItemLabel = window.i18n.t('list__loading')
   listInfo.key = key
   if (sourceId == 'all') {
@@ -97,20 +106,26 @@ export const search = async(type: EntityType, text: string, page: number, source
         }
       }))
     }
-    return Promise.all(tasks).then((results: SearchResult[]) => {
-      if (key != listInfo.key) return []
+    const partial: SearchResult[] = []
+    return Promise.all(tasks.map(async(request, index) => {
+      const result: SearchResult = await request
+      partial[index] = result
+      if (isCurrent() && appSetting['list.loadingMode'] === 'immediate') setLists(type, partial.filter(Boolean), page, text, true)
+      return result
+    })).then((results: SearchResult[]) => {
+      if (!isCurrent()) return []
       return setLists(type, results, page, text)
-    })
+    }).finally(finish)
   }
 
   return (music[sourceId]?.entitySearch?.search(type, text, page, listInfo.limit).then((data: SearchResult) => {
-    if (key != listInfo.key) return []
+    if (!isCurrent()) return []
     return setList(type, data, page, text)
   }) ?? Promise.reject(new Error(`source not found: ${sourceId}`))).catch((error: any) => {
-    if (key != listInfo.key) return []
+    if (!isCurrent()) return []
     resetListInfo(type, sourceId)
     listInfo.noItemLabel = window.i18n.t('list__load_failed')
     console.log(error)
     throw error
-  })
+  }).finally(finish)
 }

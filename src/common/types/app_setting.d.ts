@@ -510,10 +510,13 @@ declare global {
        */
       'list.coverSize': number
 
+      /** 歌曲列表各布局的列宽比例（JSON） */
+      'list.columnWidths': string
+
       /**
        * 列表与封面一起显示，或先显示列表再加载封面
        */
-      'list.loadingMode': 'together' | 'progressive'
+      'list.loadingMode': 'together' | 'progressive' | 'immediate'
 
       /**
        * 是否启用下载功能
@@ -685,6 +688,21 @@ declare global {
        */
       'sync.client.host': string
 
+      /** WebDAV 同步配置，仅保存在本机 */
+      'sync.webdav.enable': boolean
+      'sync.webdav.url': string
+      'sync.webdav.username': string
+      'sync.webdav.password': string
+      'sync.webdav.directory': string
+      'sync.webdav.autoSync': boolean
+      /** 自动同步间隔，单位为分钟 */
+      'sync.webdav.interval': number
+      'sync.webdav.playlists': boolean
+      'sync.webdav.downloadHistory': boolean
+      'sync.webdav.downloadTasks': boolean
+      'sync.webdav.settings': boolean
+      'sync.webdav.dislike': boolean
+
 
       /**
        * 是否启用开放API服务
@@ -758,6 +776,24 @@ declare global {
        * 动画速率倍数（0.5 = 慢一倍 / 1.0 = 默认 / 1.5 = 快一半）
        */
       'ui.animationSpeed': number
+
+      /** 侧边栏宽度，0 使用自适应默认宽度 */
+      'ui.sidebar.width': number
+      /** 锁定主侧栏宽度及导航按钮顺序 */
+      'ui.sidebar.locked': boolean
+      /** 全部六个导航按钮的顺序，以逗号分隔 */
+      'ui.sidebar.order': string
+      'ui.sidebar.showSearch': boolean
+      'ui.sidebar.showSongList': boolean
+      'ui.sidebar.showLeaderboard': boolean
+      'ui.sidebar.showList': boolean
+
+      /** 我的列表侧栏宽度，0 使用自适应默认宽度 */
+      'ui.myListSidebar.width': number
+      'ui.myListSidebar.collapsed': boolean
+      /** 排行榜侧栏宽度，0 使用自适应默认宽度 */
+      'ui.leaderboardSidebar.width': number
+      'ui.leaderboardSidebar.collapsed': boolean
 
       /**
        * 是否启用无缝衔接（gapless playback，预加载下一首并交叉淡化）

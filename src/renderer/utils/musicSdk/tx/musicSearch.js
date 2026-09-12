@@ -1,6 +1,54 @@
 import { formatPlayTime, sizeFormate } from '../../index'
 import { formatSingerName } from '../utils'
 import { signRequest } from './utils'
+import { requestMsg } from '../../message'
+import { withSearchFallback } from '../searchFallback'
+import { buildDesktopSearchRequest, mobileSearch, smartboxSearch } from './searchFallback'
+
+const pendingSearches = new Map()
+const retryDelays = [700, 1500]
+// Preserve the official LX six-attempt allowance for QQ 2001 responses
+// without extending network timeout retries.
+const qqSearchRetryDelays = [700, 1500, 1500, 1500, 1500]
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
+const safeCode = value => typeof value == 'number' && Number.isFinite(value)
+  ? value
+  : typeof value == 'string' && /^[a-zA-Z0-9_-]{1,40}$/.test(value) ? value : null
+
+const responseError = response => {
+  const body = response?.body
+  const req = body?.['music.search.SearchCgiService'] ?? body?.req
+  const details = {
+    kind: 'response',
+    httpStatus: safeCode(response?.statusCode),
+    code: safeCode(body?.code),
+    reqCode: safeCode(req?.code),
+    bodyType: body == null ? 'empty' : Array.isArray(body) ? 'array' : typeof body,
+    hasSongList: Array.isArray(req?.data?.body?.song?.list ?? req?.data?.body?.item_song),
+  }
+  const error = new Error(`QQ 搜索失败 (HTTP ${details.httpStatus ?? '?'}, code ${details.code ?? '?'}, req.code ${details.reqCode ?? '?'})`)
+  error.searchDetails = details
+  // Retrying a rejected request immediately only repeats the same failure.
+  const status = Number(response?.statusCode)
+  error.retryable = (status >= 200 && status < 300) || status >= 500 || status == 408 || status == 429
+  const retryAfter = Number(response?.headers?.['retry-after'])
+  error.retryAfterMs = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 0
+  if (error.retryAfterMs > 5000) error.retryable = false
+  return error
+}
+
+const networkError = cause => {
+  const code = safeCode(cause?.code)
+  const kind = cause?.message == requestMsg.cancelRequest ? 'cancelled' : 'network'
+  const details = { kind, networkCode: code }
+  const error = new Error(`QQ 搜索失败 (${kind}${code ? ': ' + code : ''})`)
+  error.searchDetails = details
+  error.retryable = kind != 'cancelled' && (
+    ['ETIMEDOUT', 'ESOCKETTIMEDOUT', 'ECONNRESET', 'EAI_AGAIN', 'ENOTFOUND', 'EPIPE'].includes(code) ||
+    [requestMsg.timeout, requestMsg.notConnectNetwork, requestMsg.unachievable].includes(cause?.message)
+  )
+  return error
+}
 
 export default {
   limit: 50,
@@ -8,64 +56,89 @@ export default {
   page: 0,
   allPage: 1,
   successCode: 0,
-  musicSearch(str, page, limit, retryNum = 0, searchType = 0) {
-    if (retryNum > 5) return Promise.reject(new Error('搜索失败'))
-    const searchRequest = signRequest({
-      comm: {
-        ct: '11',
-        cv: '14090508',
-        v: '14090508',
-        tmeAppID: 'qqmusic',
-        phonetype: 'EBG-AN10',
-        deviceScore: '553.47',
-        devicelevel: '50',
-        newdevicelevel: '20',
-        rom: 'HuaWei/EMOTION/EmotionUI_14.2.0',
-        os_ver: '12',
-        OpenUDID: '0',
-        OpenUDID2: '0',
-        QIMEI36: '0',
-        udid: '0',
-        chid: '0',
-        aid: '0',
-        oaid: '0',
-        taid: '0',
-        tid: '0',
-        wid: '0',
-        uid: '0',
-        sid: '0',
-        modeSwitch: '6',
-        teenMode: '0',
-        ui_mode: '2',
-        nettype: '1020',
-        v4ip: '',
-      },
-      req: {
-        module: 'music.search.SearchCgiService',
-        method: 'DoSearchForQQMusicMobile',
-        param: {
-          search_type: searchType,
-          searchid: Math.random().toString().slice(2),
-          query: str,
-          page_num: page,
-          num_per_page: limit,
-          highlight: 0,
-          nqc_flag: 0,
-          multi_zhida: 0,
-          cat: 2,
-          grp: 1,
-          sin: 0,
-          sem: 0,
-        },
-      },
-    })
-    return searchRequest.then(({ body }) => {
-      // console.log(body)
-      if (!body || !body.req || body.code != this.successCode || body.req.code != this.successCode) {
-        return this.musicSearch(str, page, limit, ++retryNum, searchType)
+  musicSearch(str, page, limit, retryNum = 0, searchType = 0, isDesktop = true) {
+    const key = JSON.stringify([str, page, limit, searchType, isDesktop])
+    const pending = pendingSearches.get(key)
+    if (pending) return pending
+    const run = async() => {
+      for (let attempt = 0; ; attempt++) {
+        const started = Date.now()
+        let failure
+        try {
+          const response = await signRequest(isDesktop ? buildDesktopSearchRequest(str, page, limit, searchType) : {
+            comm: {
+              ct: '11',
+              cv: '14090508',
+              v: '14090508',
+              tmeAppID: 'qqmusic',
+              phonetype: 'EBG-AN10',
+              deviceScore: '553.47',
+              devicelevel: '50',
+              newdevicelevel: '20',
+              rom: 'HuaWei/EMOTION/EmotionUI_14.2.0',
+              os_ver: '12',
+              OpenUDID: '0',
+              OpenUDID2: '0',
+              QIMEI36: '0',
+              udid: '0',
+              chid: '0',
+              aid: '0',
+              oaid: '0',
+              taid: '0',
+              tid: '0',
+              wid: '0',
+              uid: '0',
+              sid: '0',
+              modeSwitch: '6',
+              teenMode: '0',
+              ui_mode: '2',
+              nettype: '1020',
+              v4ip: '',
+            },
+            req: {
+              module: 'music.search.SearchCgiService',
+              method: 'DoSearchForQQMusicMobile',
+              param: {
+                search_type: searchType,
+                searchid: Math.random().toString().slice(2),
+                query: str,
+                page_num: page,
+                num_per_page: limit,
+                highlight: 0,
+                nqc_flag: 0,
+                multi_zhida: 0,
+                cat: 2,
+                grp: 1,
+                sin: 0,
+                sem: 0,
+              },
+            },
+          })
+          const body = response?.body
+          const req = body?.['music.search.SearchCgiService'] ?? body?.req
+          const data = req?.data
+          if (response.statusCode >= 200 && response.statusCode < 300 && body?.code == this.successCode && req?.code == this.successCode &&
+            data?.body && data?.meta && (searchType !== 0 || Array.isArray(isDesktop ? data.body.song?.list : data.body.item_song))) return data
+          failure = responseError(response)
+        } catch (error) {
+          failure = networkError(error)
+        }
+        const details = failure.searchDetails
+        const delays = details.httpStatus == 200 && details.code == 0 && details.reqCode == 2001
+          ? qqSearchRetryDelays
+          : retryDelays
+        const retry = failure.retryable && attempt + retryNum < delays.length
+        // Keep this small and free of keywords, signed URLs, cookies and response bodies.
+        console.warn('[QQSearch]', JSON.stringify({ ...failure.searchDetails, attempt: attempt + 1, elapsedMs: Date.now() - started, retry }))
+        if (!retry) throw failure
+        await delay(Math.max(delays[attempt + retryNum], failure.retryAfterMs || 0))
       }
-      return body.req.data
-    })
+    }
+    const task = run()
+    pendingSearches.set(key, task)
+    const clear = () => { if (pendingSearches.get(key) === task) pendingSearches.delete(key) }
+    task.then(clear, clear)
+    return task
   },
   // randomInt(min, max) {
   //   return Math.floor(Math.random() * (max - min + 1)) + min
@@ -88,28 +161,28 @@ export default {
       let types = []
       let _types = {}
       const file = item.file
-      if (file.size_128mp3 != 0) {
+      if (file.size_128mp3 > 0) {
         let size = sizeFormate(file.size_128mp3)
         types.push({ type: '128k', size })
         _types['128k'] = {
           size,
         }
       }
-      if (file.size_320mp3 !== 0) {
+      if (file.size_320mp3 > 0) {
         let size = sizeFormate(file.size_320mp3)
         types.push({ type: '320k', size })
         _types['320k'] = {
           size,
         }
       }
-      if (file.size_flac !== 0) {
+      if (file.size_flac > 0) {
         let size = sizeFormate(file.size_flac)
         types.push({ type: 'flac', size })
         _types.flac = {
           size,
         }
       }
-      if (file.size_hires !== 0) {
+      if (file.size_hires > 0) {
         let size = sizeFormate(file.size_hires)
         types.push({ type: 'flac24bit', size })
         _types.flac24bit = {
@@ -147,13 +220,14 @@ export default {
     // console.log(list)
     return list
   },
-  search(str, page = 1, limit) {
+  search: withSearchFallback(function(str, page, limit) { return this.searchPrimary(str, page, limit) }, [mobileSearch, smartboxSearch]),
+  searchPrimary(str, page = 1, limit, isDesktop = true) {
     if (limit == null) limit = this.limit
     // http://newlyric.kuwo.cn/newlyric.lrc?62355680
-    return this.musicSearch(str, page, limit).then(({ body, meta }) => {
-      let list = this.handleResult(body.item_song)
+    return this.musicSearch(str, page, limit, 0, 0, isDesktop).then(({ body, meta }) => {
+      let list = this.handleResult(isDesktop ? body.song.list : body.item_song)
 
-      this.total = meta.estimate_sum
+      this.total = isDesktop ? meta.sum : meta.estimate_sum
       this.page = page
       this.allPage = Math.ceil(this.total / limit)
 

@@ -2,6 +2,7 @@ import { markRaw } from '@common/utils/vueTools'
 import music from '@renderer/utils/musicSdk'
 import { deduplicationList, toNewMusicInfo } from '@renderer/utils'
 import { sortInsert, similar } from '@common/utils/common'
+import { appSetting } from '@renderer/store/setting'
 
 import { sources, maxPages, listInfos } from './state'
 
@@ -12,6 +13,12 @@ interface SearchResult {
   total: number
   source: LX.OnlineSource
 }
+
+interface PendingSearch {
+  key: string
+  promise: Promise<LX.Music.MusicInfo[]>
+}
+const pendingSearches = new Map<LX.OnlineSource | 'all', PendingSearch>()
 
 
 /**
@@ -32,7 +39,7 @@ const handleSortList = (list: LX.Music.MusicInfo[], keyword: string) => {
 }
 
 
-const setLists = (results: SearchResult[], page: number, text: string): LX.Music.MusicInfo[] => {
+const setLists = (results: SearchResult[], page: number, text: string, pending = false): LX.Music.MusicInfo[] => {
   let pages = []
   let totals = []
   let limit = 0
@@ -54,7 +61,8 @@ const setLists = (results: SearchResult[], page: number, text: string): LX.Music
   // listInfo.limit = limit
   listInfo.page = page
   listInfo.list = handleSortList(list, text)
-  if (text && !list.length && page == 1) listInfo.noItemLabel = window.i18n.t('no_item')
+  if (pending) listInfo.noItemLabel = window.i18n.t('list__loading')
+  else if (text && !list.length && page == 1) listInfo.noItemLabel = window.i18n.t('no_item')
   else listInfo.noItemLabel = ''
   return listInfo.list
 }
@@ -74,8 +82,10 @@ const setList = (datas: SearchResult, page: number, text: string): LX.Music.Musi
 }
 
 export const resetListInfo = (sourceId: LX.OnlineSource | 'all'): [] => {
+  pendingSearches.delete(sourceId)
   let listInfo = listInfos[sourceId]
   if (!listInfo) return []
+  listInfo.key = null
   listInfo.list = []
   listInfo.page = 0
   listInfo.maxPage = 0
@@ -84,13 +94,9 @@ export const resetListInfo = (sourceId: LX.OnlineSource | 'all'): [] => {
   return []
 }
 
-export const search = async(text: string, page: number, sourceId: LX.OnlineSource | 'all'): Promise<LX.Music.MusicInfo[]> => {
+const performSearch = async(text: string, page: number, sourceId: LX.OnlineSource | 'all', isCurrent: () => boolean): Promise<LX.Music.MusicInfo[]> => {
   const listInfo = listInfos[sourceId]
-  if (!text) return resetListInfo(sourceId)
-  const key = `${page}__${text}`
   if (sourceId == 'all') {
-    listInfo!.noItemLabel = window.i18n.t('list__loading')
-    listInfo!.key = key
     let task = []
     for (const source of sources) {
       if (source == 'all') continue
@@ -117,23 +123,48 @@ export const search = async(text: string, page: number, sourceId: LX.OnlineSourc
         }))
       }
     }
-    return Promise.all(task).then((results: SearchResult[]) => {
-      if (key != listInfo!.key) return []
+    const partial: SearchResult[] = []
+    return Promise.all(task.map(async(request, index) => {
+      const result: SearchResult = await request
+      partial[index] = result
+      if (isCurrent() && appSetting['list.loadingMode'] === 'immediate') setLists(partial.filter(Boolean), page, text, true)
+      return result
+    })).then((results: SearchResult[]) => {
+      if (!isCurrent()) return []
       return setLists(results, page, text)
     })
   } else {
-    if (listInfo?.key == key && listInfo?.list.length) return listInfo?.list
-    listInfo!.noItemLabel = window.i18n.t('list__loading')
-    listInfo!.key = key
-    return music[sourceId].musicSearch.search(text, page, listInfo!.limit).then((data: SearchResult) => {
-      if (key != listInfo!.key) return []
+    return Promise.resolve().then(() => music[sourceId].musicSearch.search(text, page, listInfo!.limit)).then((data: SearchResult) => {
+      if (!isCurrent()) return []
       return setList(data, page, text)
     }).catch((error: any) => {
-      if (key != listInfo!.key) return []
+      if (!isCurrent()) return []
       resetListInfo(sourceId)
       listInfo!.noItemLabel = window.i18n.t('list__load_failed')
       console.log(error)
       throw error
     })
   }
+}
+
+export const search = async(text: string, page: number, sourceId: LX.OnlineSource | 'all'): Promise<LX.Music.MusicInfo[]> => {
+  if (!text) return Promise.resolve(resetListInfo(sourceId))
+  const listInfo = listInfos[sourceId]!
+  const key = `${page}__${text}`
+  const pending = pendingSearches.get(sourceId)
+  if (pending?.key === key) return pending.promise
+  if (!pending && listInfo.key === key && listInfo.list.length) return Promise.resolve(listInfo.list)
+
+  // An old query's rows must not become a cache hit for a new query still loading.
+  resetListInfo(sourceId)
+  listInfo.key = key
+  listInfo.noItemLabel = window.i18n.t('list__loading')
+  const task: PendingSearch = {
+    key,
+    promise: Promise.resolve().then(async() => performSearch(text, page, sourceId, () => pendingSearches.get(sourceId) === task)).finally(() => {
+      if (pendingSearches.get(sourceId) === task) pendingSearches.delete(sourceId)
+    }),
+  }
+  pendingSearches.set(sourceId, task)
+  return task.promise
 }

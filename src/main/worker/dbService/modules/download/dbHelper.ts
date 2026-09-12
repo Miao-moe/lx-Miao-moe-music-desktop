@@ -62,3 +62,12 @@ export const clearDownloadList = () => {
   clearStatement.run()
 }
 
+export const replaceDownloadList = (infos: LX.DBService.DownloadMusicInfo[]) => {
+  const db = getDB()
+  const clear = createClearStatement()
+  const insert = createInsertStatement()
+  db.transaction(() => {
+    clear.run()
+    for (const info of infos) insert.run(info)
+  })()
+}

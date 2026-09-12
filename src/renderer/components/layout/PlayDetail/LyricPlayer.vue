@@ -14,13 +14,19 @@
       </div>
     </transition>
     <transition enter-active-class="animated fadeIn" leave-active-class="animated fadeOut">
-      <div v-if="isShowLyricProgressSetting" v-show="isStopScroll && !isShowLrcSelectContent" :class="$style.skip">
-        <div ref="dom_skip_line" :class="$style.line" />
+      <div v-if="isShowLyricProgressSetting" v-show="isStopScroll && canSeek" :class="$style.skip" data-lyric-seek-guide>
+        <div :class="$style.line" aria-hidden="true" />
         <span :class="$style.label">{{ timeStr }}</span>
-        <base-btn :class="$style.skipBtn" @mouseenter="handleSkipMouseEnter" @mouseleave="handleSkipMouseLeave" @click="handleSkipPlay">
-          <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" height="50%" viewBox="0 0 1024 1024" space="preserve">
+        <base-btn
+          type="button" :class="$style.skipBtn" :disabled="!canSeek"
+          :aria-label="$t('player__lyric_seek_time', { time: timeStr })" :title="$t('player__lyric_seek_time', { time: timeStr })"
+          @mouseenter="handleSkipMouseEnter" @mouseleave="handleSkipMouseLeave" @focus="handleSkipFocus" @blur="handleSkipBlur"
+          @click.stop="handleSkipPlay" @keydown.stop @keyup.stop
+        >
+          <svg aria-hidden="true" viewBox="0 0 1024 1024" width="12" height="12">
             <use xlink:href="#icon-play" />
           </svg>
+          {{ $t('player__lyric_seek') }}
         </base-btn>
       </div>
     </transition>
@@ -46,6 +52,7 @@ import { playProgress } from '@renderer/store/player/playProgress'
 import { isFullscreen } from '@renderer/store'
 import {
   isPlay,
+  isShowPlayerDetail,
   isShowLrcSelectContent,
   isShowPlayComment,
   musicInfo as playerMusicInfo,
@@ -67,23 +74,25 @@ export default {
   },
   setup() {
     const isZoomActiveLrc = computed(() => appSetting['playDetail.isZoomActiveLrc'])
-    const isShowLyricProgressSetting = computed(() => appSetting['playDetail.isShowLyricProgressSetting'])
+    const isShowLyricProgressSetting = computed(() => appSetting['playDetail.isShowLyricProgressSetting'] && isShowPlayerDetail.value && !isShowLrcSelectContent.value)
 
     const {
       dom_lyric,
       dom_lyric_text,
-      dom_skip_line,
       isMsDown,
       isStopScroll,
       timeStr,
+      canSeek,
       handleLyricMouseDown,
       handleLyricTouchStart,
       handleWheel,
       handleSkipPlay,
       handleSkipMouseEnter,
       handleSkipMouseLeave,
+      handleSkipFocus,
+      handleSkipBlur,
       handleScrollLrc,
-    } = useLyric({ isPlay, lyric, playProgress, isShowLyricProgressSetting })
+    } = useLyric({ isPlay, lyric, playProgress, musicInfo: playerMusicInfo, isShowLyricProgressSetting })
 
     const dom_lrc_select_content = useSelectAllLrc()
 
@@ -158,16 +167,18 @@ export default {
     return {
       dom_lyric,
       dom_lyric_text,
-      dom_skip_line,
       dom_lrc_select_content,
       isMsDown,
       timeStr,
+      canSeek,
       handleLyricMouseDown,
       handleLyricTouchStart,
       handleWheel,
       handleSkipPlay,
       handleSkipMouseEnter,
       handleSkipMouseLeave,
+      handleSkipFocus,
+      handleSkipBlur,
       lyric,
       lrcStyles,
       lrcFontSize,
@@ -294,46 +305,40 @@ export default {
 
 .skip {
   position: absolute;
-  top: calc(38% + var(--playDetail-lrc-font-size, 16px) + 4px);
+  top: 50%;
   left: 0;
-  // height: 6px;
   width: 100%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 1;
   pointer-events: none;
-  // opacity: .5;
   .line {
-    border-top: 2px dotted var(--color-primary-dark-100);
-    opacity: .15;
-    margin-right: 30px;
-    -webkit-mask-image: linear-gradient(90deg, transparent 0%, transparent 15%, #fff 100%);
+    flex: 1;
+    min-width: 0;
+    border-top: 1px solid var(--color-primary-dark-100);
+    opacity: .45;
   }
   .label {
-    position: absolute;
-    right: 30px;
-    top: -14px;
+    flex: none;
     line-height: 1.2;
     font-size: 12px;
+    font-variant-numeric: tabular-nums;
     color: var(--color-primary-dark-100);
-    opacity: .7;
   }
   .skipBtn {
-    position: absolute;
-    right: 0;
-    top: 0;
-    transform: translateY(-50%);
-    width: 30px;
-    height: 30px;
-    padding: 0;
+    flex: none;
+    min-width: 64px;
+    height: 32px;
+    padding: 0 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: none !important;
-    pointer-events: initial;
-    transition: @transition-normal;
-    transition-property: opacity;
-    opacity: .8;
-    &:hover {
-      opacity: .6;
-    }
+    gap: 4px;
+    font-size: 13px;
+    white-space: nowrap;
+    pointer-events: auto;
   }
 }
 .lyricSelectContent {

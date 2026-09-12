@@ -1,51 +1,29 @@
 <template>
-  <common-list-loading :load-key="list" :loading="isMessage(noItem, 'list__loading')" :class="$style.songList" :style="{ '--list-cover-size': `${appSetting['list.coverSize']}px` }">
+  <common-list-loading :load-key="list" :loading="isLoading" :class="$style.songList" :style="columnLayout.style">
     <!-- <transition enter-active-class="animated-fast fadeIn" leave-active-class="animated-fast fadeOut"> -->
     <div :class="$style.list">
-      <div class="thead">
-        <table :class="$style.headerTable">
-          <thead>
-            <tr v-if="actionButtonsVisible">
-              <th class="num" style="width: 5%;">#</th>
-              <th class="no-select" :class="$style.coverHeader">{{ $t('music_cover') }}</th>
-              <th class="nobreak">{{ $t('music_name') }}</th>
-              <th class="nobreak" style="width: 22%;">{{ $t('music_singer') }}</th>
-              <th class="nobreak" style="width: 22%;">{{ $t('music_album') }}</th>
-              <th class="nobreak" style="width: 9%;">{{ $t('music_time') }}</th>
-              <th class="nobreak" style="width: 16%;">{{ $t('action') }}</th>
-            </tr>
-            <tr v-else>
-              <th class="num" style="width: 5%;">#</th>
-              <th class="no-select" :class="$style.coverHeader">{{ $t('music_cover') }}</th>
-              <th class="nobreak">{{ $t('music_name') }}</th>
-              <th class="nobreak" style="width: 24%;">{{ $t('music_singer') }}</th>
-              <th class="nobreak" style="width: 27%;">{{ $t('music_album') }}</th>
-              <th class="nobreak" style="width: 10%;">{{ $t('music_time') }}</th>
-            </tr>
-          </thead>
-        </table>
-      </div>
+      <common-music-list-header :layout="columnLayout" />
       <div :class="$style.content">
-        <div v-show="!noItem" ref="dom_listContent" :class="$style.content">
-          <base-virtualized-list v-if="actionButtonsVisible" ref="listRef" :list="list" key-name="id" :item-height="listItemHeight" :overscan="10" container-class="scroll" content-class="list" @contextmenu.capture="handleListRightClick">
+        <div v-show="!noItem || (immediate && isLoading && list.length)" ref="dom_listContent" :class="$style.content">
+          <base-virtualized-list v-if="actionButtonsVisible" ref="listRef" :list="list" key-name="id" :item-height="listItemHeight" :overscan="10" container-class="scroll music-column-scroll" content-class="list" @contextmenu.capture="handleListRightClick">
             <template #default="{ item, index }">
               <div
                 class="list-item" :class="[{ selected: rightClickSelectedIndex == index }, { active: selectedList.includes(item) }]"
                 @click="handleListItemClick($event, index)" @contextmenu="handleListItemRightClick($event, index)"
               >
-                <div class="list-item-cell no-select num" style="flex: 0 0 5%;" @click.stop>{{ index + 1 }}</div>
-                <div class="list-item-cell no-select" :class="$style.cover" style="flex: 0 0 calc(var(--list-cover-size) + 12px); padding: 0 6px;">
+                <div class="list-item-cell no-select num" style="flex: 0 0 var(--music-column-index);" data-music-cell="index" @click.stop>{{ index + 1 }}</div>
+                <div class="list-item-cell no-select" :class="$style.cover" style="flex: 0 0 var(--music-column-cover); padding: 0 6px;" data-music-cell="cover">
                   <common-cover-image v-if="!coverErrorSet.has(getCoverKey(item))" :music-info="item" :size="appSetting['list.coverSize']" :alt="item.name" @error="handleCoverError(item)" />
                   <svg v-else version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" width="60%" height="60%" viewBox="0 0 24 24" space="preserve">
                     <use xlink:href="#icon-music" />
                   </svg>
                 </div>
-                <div class="list-item-cell auto name">
+                <div class="list-item-cell name" style="flex: 0 0 var(--music-column-name);" data-music-cell="name">
                   <span class="select name" :aria-label="item.name">{{ item.name }}</span>
                   <span v-if="qualityBadgeLabel(item)" class="no-select badge badge-theme-primary">{{ $t(qualityBadgeLabel(item)) }}</span>
                   <span v-if="sourceTag" class="no-select badge badge-theme-tertiary">{{ item.source }}</span>
                 </div>
-                <div class="list-item-cell" style="flex: 0 0 22%;">
+                <div class="list-item-cell" style="flex: 0 0 var(--music-column-singer);" data-music-cell="singer">
                   <span v-if="canOpenEntity(item) && getSingerNames(item).length" :class="$style.entityLinks" class="select" :aria-label="item.singer">
                     <template v-for="(singer, singerIndex) in getSingerNames(item)" :key="`${singer}__${singerIndex}`">
                       <span v-if="singerIndex" :class="$style.entitySeparator">、</span>
@@ -54,7 +32,7 @@
                   </span>
                   <span v-else class="select" :aria-label="item.singer">{{ item.singer }}</span>
                 </div>
-                <div class="list-item-cell" style="flex: 0 0 22%;">
+                <div class="list-item-cell" style="flex: 0 0 var(--music-column-album);" data-music-cell="album">
                   <button
                     v-if="canOpenEntity(item) && item.meta.albumName" type="button" class="select" :class="$style.entityLink"
                     :aria-label="item.meta.albumName" @click.stop="openEntityDetail(item, 'album', item.meta.albumName)"
@@ -63,8 +41,8 @@
                   </button>
                   <span v-else class="select" :aria-label="item.meta.albumName">{{ item.meta.albumName }}</span>
                 </div>
-                <div class="list-item-cell" style="flex: 0 0 9%;"><span class="no-select">{{ item.interval || '--/--' }}</span></div>
-                <div class="list-item-cell" style="flex: 0 0 16%; padding-left: 0; padding-right: 0;">
+                <div class="list-item-cell" style="flex: 0 0 var(--music-column-time);" data-music-cell="time"><span class="no-select">{{ item.interval || '--/--' }}</span></div>
+                <div class="list-item-cell" style="flex: 0 0 var(--music-column-action); padding-left: 0; padding-right: 0;" data-music-cell="action">
                   <material-list-buttons :index="index" :remove-btn="false" :download-btn="assertApiSupport(item.source)" :play-btn="checkApiSource ? assertApiSupport(item.source) : true" @btn-click="handleListBtnClick" />
                 </div>
               </div>
@@ -75,25 +53,25 @@
               </div>
             </template>
           </base-virtualized-list>
-          <base-virtualized-list v-else ref="listRef" :list="list" key-name="id" :item-height="listItemHeight" :overscan="10" container-class="scroll" content-class="list" @contextmenu.capture="handleListRightClick">
+          <base-virtualized-list v-else ref="listRef" :list="list" key-name="id" :item-height="listItemHeight" :overscan="10" container-class="scroll music-column-scroll" content-class="list" @contextmenu.capture="handleListRightClick">
             <template #default="{ item, index }">
               <div
                 class="list-item" :class="[{ selected: rightClickSelectedIndex == index }, { active: selectedList.includes(item) }]"
                 @click="handleListItemClick($event, index)" @contextmenu="handleListItemRightClick($event, index)"
               >
-                <div class="list-item-cell no-select num" style="flex: 0 0 5%;" @click.stop>{{ index + 1 }}</div>
-                <div class="list-item-cell no-select" :class="$style.cover" style="flex: 0 0 calc(var(--list-cover-size) + 12px); padding: 0 6px;">
+                <div class="list-item-cell no-select num" style="flex: 0 0 var(--music-column-index);" data-music-cell="index" @click.stop>{{ index + 1 }}</div>
+                <div class="list-item-cell no-select" :class="$style.cover" style="flex: 0 0 var(--music-column-cover); padding: 0 6px;" data-music-cell="cover">
                   <common-cover-image v-if="!coverErrorSet.has(getCoverKey(item))" :music-info="item" :size="appSetting['list.coverSize']" :alt="item.name" @error="handleCoverError(item)" />
                   <svg v-else version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" width="60%" height="60%" viewBox="0 0 24 24" space="preserve">
                     <use xlink:href="#icon-music" />
                   </svg>
                 </div>
-                <div class="list-item-cell auto name">
+                <div class="list-item-cell name" style="flex: 0 0 var(--music-column-name);" data-music-cell="name">
                   <span class="select name" :aria-label="item.name">{{ item.name }}</span>
                   <span v-if="qualityBadgeLabel(item)" class="no-select badge badge-theme-primary">{{ $t(qualityBadgeLabel(item)) }}</span>
                   <span v-if="sourceTag" class="no-select badge badge-theme-tertiary">{{ item.source }}</span>
                 </div>
-                <div class="list-item-cell" style="flex: 0 0 24%;">
+                <div class="list-item-cell" style="flex: 0 0 var(--music-column-singer);" data-music-cell="singer">
                   <span v-if="canOpenEntity(item) && getSingerNames(item).length" :class="$style.entityLinks" class="select" :aria-label="item.singer">
                     <template v-for="(singer, singerIndex) in getSingerNames(item)" :key="`${singer}__${singerIndex}`">
                       <span v-if="singerIndex" :class="$style.entitySeparator">、</span>
@@ -102,7 +80,7 @@
                   </span>
                   <span v-else class="select" :aria-label="item.singer">{{ item.singer }}</span>
                 </div>
-                <div class="list-item-cell" style="flex: 0 0 27%;">
+                <div class="list-item-cell" style="flex: 0 0 var(--music-column-album);" data-music-cell="album">
                   <button
                     v-if="canOpenEntity(item) && item.meta.albumName" type="button" class="select" :class="$style.entityLink"
                     :aria-label="item.meta.albumName" @click.stop="openEntityDetail(item, 'album', item.meta.albumName)"
@@ -111,7 +89,7 @@
                   </button>
                   <span v-else class="select" :aria-label="item.meta.albumName">{{ item.meta.albumName }}</span>
                 </div>
-                <div class="list-item-cell" style="flex: 0 0 10%;"><span class="no-select">{{ item.interval || '--/--' }}</span></div>
+                <div class="list-item-cell" style="flex: 0 0 var(--music-column-time);" data-music-cell="time"><span class="no-select">{{ item.interval || '--/--' }}</span></div>
               </div>
             </template>
             <template #footer>
@@ -123,7 +101,7 @@
         </div>
         <transition enter-active-class="animated fadeIn" leave-active-class="animated fadeOut">
           <div
-            v-show="noItem" :class="[$style.noitem, 'ui-state', { 'ui-state-error': isMessage(noItem, 'list__load_failed') }]"
+            v-show="noItem && !(immediate && isLoading)" :class="[$style.noitem, 'ui-state', { 'ui-state-error': isMessage(noItem, 'list__load_failed') }]"
             role="status" :aria-busy="isMessage(noItem, 'list__loading')"
           >
             <span v-if="isMessage(noItem, 'list__loading')" class="ui-spinner" />
@@ -148,7 +126,7 @@
 <script>
 import { clipboardWriteText } from '@common/utils/electron'
 import { assertApiSupport } from '@renderer/store/utils'
-import { reactive, ref } from '@common/utils/vueTools'
+import { computed, reactive, ref } from '@common/utils/vueTools'
 import { qualityList } from '@renderer/store'
 import { getMaxQuality } from '@renderer/core/music/utils'
 import { getCoverKey } from '@renderer/utils/musicCover'
@@ -159,6 +137,7 @@ import useMusicDownload from './useMusicDownload'
 import useMusicAdd from './useMusicAdd'
 import useMusicActions from './useMusicActions'
 import { appSetting } from '@renderer/store/setting'
+import useMusicListColumns from '@renderer/utils/compositions/useMusicListColumns'
 import useEntityDetailNavigation from '@renderer/utils/compositions/useEntityDetailNavigation'
 export default {
   name: 'MaterialOnlineList',
@@ -196,12 +175,15 @@ export default {
   },
   emits: ['show-menu', 'play-list', 'togglePage', 'retry'],
   setup(props, { emit }) {
-    const actionButtonsVisible = appSetting['list.actionButtonsVisible']
+    const actionButtonsVisible = computed(() => appSetting['list.actionButtonsVisible'])
+    const columnLayout = useMusicListColumns('music', actionButtonsVisible)
     const { canOpenEntity, getSingerNames, openEntityDetail } = useEntityDetailNavigation()
     const rightClickSelectedIndex = ref(-1)
     const dom_listContent = ref(null)
     const listRef = ref(null)
     const isMessage = (text, key) => Object.values(window.i18n.messages).some(messages => messages[key] == text)
+    const isLoading = computed(() => isMessage(props.noItem, 'list__loading'))
+    const immediate = computed(() => appSetting['list.loadingMode'] === 'immediate')
 
     const {
       selectedList,
@@ -332,8 +314,11 @@ export default {
     }
 
     return {
+      columnLayout,
       listItemHeight,
       isMessage,
+      isLoading,
+      immediate,
       handleListItemClick,
       selectedList,
       handleListItemRightClick,
@@ -404,18 +389,6 @@ export default {
   height: 100%;
 }
 
-.headerTable {
-  table-layout: fixed;
-
-  th {
-    box-sizing: border-box;
-  }
-
-  .coverHeader {
-    width: calc(var(--list-cover-size) + 12px);
-    text-align: center;
-  }
-}
 
 .cover {
   height: 100%;

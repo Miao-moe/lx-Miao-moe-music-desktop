@@ -18,8 +18,8 @@ export default {
       const types = []
       const _types = {}
       let size
-      let privilege = privileges[index]
-      if (privilege.id !== item.id) privilege = privileges.find(p => p.id === item.id)
+      let privilege = privileges?.[index]
+      if (privilege?.id !== item.id) privilege = privileges?.find(p => p.id === item.id)
       if (!privilege) return
 
       if (privilege.maxBrLevel == 'hires') {

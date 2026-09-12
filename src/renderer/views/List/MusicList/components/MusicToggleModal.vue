@@ -29,7 +29,10 @@
         </template>
         <div v-else :class="$style.noItem">
           <p v-text="noItemLabel" />
-          <base-btn v-if="isError" class="ui-state-retry" min @click="loadList">{{ $t('reload') }}</base-btn>
+          <template v-if="isError">
+            <p>{{ $t('list__load_failed') }}</p>
+            <base-btn class="ui-state-retry" min @click="retrySource">{{ $t('reload') }}</base-btn>
+          </template>
         </div>
       </div>
       <div :class="$style.footer">
@@ -76,6 +79,8 @@ import musicSdk from '@renderer/utils/musicSdk'
 import { markRaw } from 'vue'
 import { rankMusicToggleCandidates } from '@renderer/utils/musicToggleCandidates'
 
+const sources = ['kw', 'kg', 'tx', 'wy', 'mg']
+
 export default {
   props: {
     show: {
@@ -88,32 +93,44 @@ export default {
         return {}
       },
     },
+    preferredSource: {
+      type: String,
+      default: '',
+    },
   },
   emits: ['update:show', 'toggle'],
   data() {
     return {
       lists: {},
-      source: '',
-      isError: false,
-      loading: false,
+      source: 'kw',
+      loadStates: {},
       searchKey: 0,
       toggleMusicInfo: null,
       onlyMatches: true,
     }
   },
   computed: {
+    defaultSource() {
+      return [this.preferredSource, this.musicInfo?.source].find(source => sources.includes(source)) ?? sources[0]
+    },
     rankedLists() {
       return rankMusicToggleCandidates(this.musicInfo, Object.entries(this.lists).map(([source, list]) => ({ source, list })), this.onlyMatches)
     },
     tabs() {
       const prefix = getSourceI18nPrefix()
-      return this.rankedLists.map(item => ({ id: item.source, label: window.i18n.t(prefix + item.source) }))
+      return sources.map(source => ({ id: source, label: window.i18n.t(prefix + source) }))
     },
     list() {
       return this.rankedLists.find(item => item.source === this.source)?.list ?? []
     },
+    loading() {
+      return this.show && ['pending', 'loading'].includes(this.loadStates[this.source])
+    },
+    isError() {
+      return this.loadStates[this.source] === 'error'
+    },
     noItemLabel() {
-      return this.loading ? this.$t('list__loading') : this.isError ? this.$t('list__load_failed') : this.$t(this.onlyMatches ? 'music_toggle_no_match' : 'no_item')
+      return this.$t(this.loading ? 'list__loading' : 'music_toggle_no_match')
     },
   },
   watch: {
@@ -129,43 +146,58 @@ export default {
     },
     onlyMatches() {
       this.toggleMusicInfo = null
-      this.source = this.rankedLists[0]?.source ?? ''
     },
   },
+  beforeUnmount() {
+    this.cancelSearch()
+  },
   methods: {
-    loadList() {
-      this.isError = false
+    async fetchSourceList(source, musicInfo) {
+      const query = `${musicInfo.name?.trim() ?? ''} ${musicInfo.singer?.trim() ?? ''}`.trim()
+      const result = await musicSdk[source].musicSearch.search(query, 1, 25)
+      if (!Array.isArray(result?.list)) throw new Error('Invalid source search response')
+      return result.list.map(item => markRaw(toNewMusicInfo(item)))
+    },
+    async loadSource(source, musicInfo, searchKey) {
+      if (!this.show || this.searchKey !== searchKey) return
+      this.loadStates[source] = 'loading'
+      try {
+        const list = await this.fetchSourceList(source, musicInfo)
+        if (!this.show || this.searchKey !== searchKey) return
+        this.lists[source] = list
+        this.loadStates[source] = 'ready'
+      } catch {
+        if (!this.show || this.searchKey !== searchKey) return
+        this.lists[source] = []
+        this.loadStates[source] = 'error'
+      }
+    },
+    async loadList() {
       this.toggleMusicInfo = null
       const musicInfo = this.musicInfo
-      this.source = ''
+      const preferred = this.defaultSource
+      this.source = preferred
       this.lists = {}
-      this.loading = true
-      const searchKey = this.searchKey = Math.random()
-      void musicSdk.searchMusic({
-        name: musicInfo.name,
-        singer: musicInfo.singer,
-        source: '',
-        albumName: musicInfo.meta.albumName,
-        interval: musicInfo.interval ?? '',
-      }).then((lists) => {
-        if (this.searchKey != searchKey) return
-        for (const s of lists) this.lists[s.source] = s.list.map(s => markRaw(toNewMusicInfo(s)))
-        this.source = this.rankedLists[0]?.source ?? ''
-      }).catch(() => {
-        if (this.searchKey != searchKey) return
-        this.isError = true
-      }).finally(() => {
-        if (this.searchKey != searchKey) return
-        this.loading = false
-      })
+      this.loadStates = Object.fromEntries(sources.map(source => [source, 'pending']))
+      const searchKey = ++this.searchKey
+      await this.loadSource(preferred, musicInfo, searchKey)
+      // Publish the preferred platform before starting the remaining searches.
+      await this.$nextTick()
+      if (!this.show || this.searchKey !== searchKey) return
+      await Promise.all(sources.filter(source => source !== preferred).map(async source => this.loadSource(source, musicInfo, searchKey)))
+    },
+    retrySource() {
+      if (!this.show || this.loading) return
+      this.toggleMusicInfo = null
+      void this.loadSource(this.source, this.musicInfo, this.searchKey)
     },
     handleClose() {
       this.cancelSearch()
       this.$emit('update:show', false)
     },
     cancelSearch() {
-      this.searchKey = Math.random()
-      this.loading = false
+      ++this.searchKey
+      this.loadStates = {}
       this.toggleMusicInfo = null
     },
     handleConfirm() {

@@ -39,6 +39,7 @@ export const filterSongList = (rawList) => {
       albumName: decodeName(item.album_name ?? ''),
       albumId: item.album_id,
       songmid: item.audio_id,
+      albumAudioId: item.album_audio_id,
       source: 'kg',
       interval: formatPlayTime(item.duration),
       img: getImage(item.trans_param?.union_cover),

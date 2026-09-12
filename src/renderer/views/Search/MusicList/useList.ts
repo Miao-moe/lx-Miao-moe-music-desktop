@@ -12,6 +12,7 @@ export type SearchSource = LX.OnlineSource | 'all'
 
 export default () => {
   const listRef = ref<any>(null)
+  let searchRevision = 0
 
   const listInfo = ref<ListInfo>({
     page: 1,
@@ -24,15 +25,17 @@ export default () => {
   })
 
   const search = (text: string, source: SearchSource, page: number) => {
+    const revision = ++searchRevision
     listInfo.value = listInfos[source] as ListInfo
     if (text.length) void addHistoryWord(text)
     void searchMusic(text, page, source).then((list: LX.Music.MusicInfo[]) => {
+      if (revision !== searchRevision) return
       if (list.length) {
         setTimeout(() => {
-          if (listRef.value) listRef.value.scrollToTop()
+          if (revision === searchRevision && listRef.value) listRef.value.scrollToTop()
         })
       }
-    })
+    }).catch(() => {}) // The store already displays the failure and enables retry.
   }
 
   const handlePlayList = async(index: number) => {

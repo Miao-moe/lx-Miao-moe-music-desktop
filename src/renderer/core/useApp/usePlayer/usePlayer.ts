@@ -9,6 +9,7 @@ import {
 } from '@renderer/plugins/player'
 
 import useMediaSessionInfo from './useMediaSessionInfo'
+import useCover from './useCover'
 import usePlayProgress from './usePlayProgress'
 import usePlayEvent from './usePlayEvent'
 
@@ -44,6 +45,7 @@ export default () => {
   const t = useI18n()
 
   usePlayProgress()
+  useCover()
   useMediaSessionInfo()
   usePlayEvent()
   useLyric()

@@ -53,6 +53,23 @@ test('Fluent motion in the Electron renderer', { timeout: 150000 }, async t => {
       assert.deepEqual(await geometry(), original)
     })
 
+    await t.test('page and settings panel motion work with every list loading mode', async() => {
+      for (const mode of ['together', 'progressive', 'immediate']) {
+        await page.evaluate(mode => { window.lxData.appSetting['list.loadingMode'] = mode }, mode)
+        await route(page, '/search')
+        await settled(page)
+        await route(page, '/setting?name=SettingBasic')
+        await page.waitForFunction(() => document.querySelector('#view > [data-motion-outlet]').getAnimations().some(animation => animation.playState === 'running'))
+        await settled(page)
+        const title = await page.evaluate(() => window.i18n.t('setting__list'))
+        await page.getByRole('tab', { name: title, exact: true }).click()
+        await page.waitForFunction(() => [...document.querySelectorAll('#view [data-motion-outlet] [data-motion-outlet]')].some(element => element.getAnimations().some(animation => animation.playState === 'running')))
+        await settled(page)
+        assert.deepEqual(await geometry(), original)
+      }
+      await page.evaluate(() => { window.lxData.appSetting['list.loadingMode'] = 'together' })
+    })
+
     await t.test('source dropdown plays its exit and can reopen during exit', async() => {
       await route(page, '/songList/list')
       await settled(page)

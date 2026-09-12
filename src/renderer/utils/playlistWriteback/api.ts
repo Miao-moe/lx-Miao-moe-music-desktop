@@ -1,6 +1,5 @@
 import { getCookie, getCookieValue } from '../cookieManager'
-import { fetchResponse, getKugouAuth, getRemotePlaylists, requestKugou, wyLinuxForward } from '../cookiePlaylistApi'
-import { weapi } from '../musicSdk/wy/utils/crypto'
+import { CookieLoginError, fetchResponse, getKugouAuth, getRemotePlaylists, requestKugou, wyEapiRequest } from '../cookiePlaylistApi'
 import { updateSetting } from '../ipc'
 import { WritebackError, type LocalPlaylist, type RemoteSession, type Snapshot, type Track, type WritebackSource } from './types'
 
@@ -48,13 +47,23 @@ export const openRemotePlaylist = async(local: LocalPlaylist): Promise<RemoteSes
 
   if (source === 'wy') {
     if (!getCookieValue(cookie, 'MUSIC_U')) throw new WritebackError('login')
-    const account = await wyLinuxForward(cookie, '/api/w/nuser/account/get', {})
+    const wy = async(api: string, params: Record<string, unknown>) => {
+      assertActive()
+      try {
+        const body = await wyEapiRequest(cookie, api, params)
+        assertActive()
+        return body
+      } catch (error) {
+        if (error instanceof CookieLoginError) throw new WritebackError('login')
+        throw error
+      }
+    }
+    const account = await wy('/api/nuser/account/get', {})
     const ownerId = String(account?.account?.id ?? account?.profile?.userId ?? '')
     if (!ownerId) throw new WritebackError('login')
     let capabilities = { rename: false, order: false }
     const read = async(): Promise<Snapshot> => {
-      assertActive()
-      const body = await wyLinuxForward(cookie, '/api/v3/playlist/detail', { id, n: 0, s: 0 })
+      const body = await wy('/api/v3/playlist/detail', { id, n: 0, s: 0 })
       const playlist = body?.playlist
       if (String(playlist?.creator?.userId) !== ownerId) throw new WritebackError('owner')
       // The special "liked songs" list uses a separate API. Only ordinary owned lists qualify.
@@ -66,12 +75,7 @@ export const openRemotePlaylist = async(local: LocalPlaylist): Promise<RemoteSes
     }
     await read()
     const write = async(path: string, data: Record<string, unknown>) => {
-      const { body } = await request(`https://music.163.com/weapi${path}?csrf_token=${encodeURIComponent(getCookieValue(cookie, '__csrf') ?? '')}`, {
-        method: 'post',
-        headers: { Cookie: cookie, Referer: 'https://music.163.com/', Origin: 'https://music.163.com' },
-        form: weapi({ ...data, csrf_token: getCookieValue(cookie, '__csrf') ?? '' }),
-      })
-      if (body?.code !== 200) throw new WritebackError(body?.code === 301 ? 'login' : 'failed')
+      await wy(`/api${path}`, data)
     }
     const manipulate = async(op: string, tracks: Track[]) => {
       const ids = tracks.map(track => numberId(track.key))

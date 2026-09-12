@@ -12,7 +12,7 @@ test('source switching keeps the selected song through matching, preview and pla
     page.on('pageerror', error => { t.diagnostic(error.stack) })
     const list = [0, 1, 2].map(i => song('neighbor-' + i, 'wy', 'Neighbor ' + i, 'Fixture', '03:00'))
     list.push(original, song('last', 'wy', 'Last song', 'Fixture', '03:00'))
-    await invoke(page, 'player_list_add', { position: 0, listInfos: [{ id: 'toggle-fixture', name: 'Toggle fixture', source: 'wy', sourceListId: '123', locationUpdateTime: null }] })
+    await invoke(page, 'player_list_add', { position: 0, listInfos: [{ id: 'toggle-fixture', name: 'Toggle fixture', source: 'kg', sourceListId: '123', locationUpdateTime: null }] })
     await invoke(page, 'player_list_music_overwrite', { listId: 'toggle-fixture', musicInfos: list })
     await route(page, '/list?id=toggle-fixture')
     await settled(page)
@@ -21,11 +21,15 @@ test('source switching keeps the selected song through matching, preview and pla
       const modal = window.__motionComponents().find(c => 'searchKey' in c.data && 'musicInfo' in c.props)
       window.__toggleList = component
       window.__toggleModal = modal
-      // Replay provider responses through the real candidate ranking and controls.
-      modal.proxy.loadList = function() {
-        this.cancelSearch()
-        this.lists = Object.fromEntries(results.map(result => [result.source, result.list]))
-        this.source = this.rankedLists[0]?.source ?? ''
+      // Hold individual provider responses while exercising the real loading order and controls.
+      window.__toggleRequests = []
+      window.__finishSource = {}
+      modal.proxy.fetchSourceList = function(source) {
+        const main = document.getElementById('music_toggle_only_matches')?.closest('main')
+        window.__toggleRequests.push({ source, preferredRendered: !!main?.querySelector('button[aria-pressed]') })
+        return new Promise((resolve, reject) => {
+          window.__finishSource[source] = (fail = false) => fail ? reject(Error('fixture provider failure')) : resolve(results.find(result => result.source === source)?.list ?? [])
+        })
       }
       // No credentials or audio provider are required to verify which song playback selects.
       window.lx.apiInitPromise[0] = Promise.resolve(false)
@@ -47,6 +51,9 @@ test('source switching keeps the selected song through matching, preview and pla
         confirm: window.i18n.t('music_toggle_confirm'),
         failed: window.i18n.t('music_toggle_failed'),
         dismiss: window.i18n.t('confirm_button_text'),
+        empty: window.i18n.t('music_toggle_no_match'),
+        loading: window.i18n.t('list__loading'),
+        retry: window.i18n.t('reload'),
       }
     }, { results, original, match, unrelated })
     const menu = page.locator('[role="toolbar"][aria-hidden="false"]')
@@ -55,14 +62,47 @@ test('source switching keeps the selected song through matching, preview and pla
     const modal = page.locator('#view main').filter({ has: page.locator('#music_toggle_only_matches') })
     const preview = modal.getByRole('button', { name: labels.preview, exact: true })
     const confirm = modal.getByRole('button', { name: labels.confirm, exact: true })
-    await preview.waitFor()
-
-    await t.test('the captured request initially shows only the corresponding Kugou version', async() => {
+    await t.test('the playlist platform is selected and rendered before the other four requests', async() => {
       assert.equal(await page.evaluate(() => window.__toggleModal.proxy.source), 'kg')
-      assert.equal(await modal.getByRole('tab').count(), 1)
+      assert.equal(original.source, 'wy', 'The playlist platform takes precedence over the song platform')
+      assert.equal(await modal.getByRole('tab').count(), 5)
+      assert.deepEqual(await page.evaluate(() => window.__toggleRequests.map(request => request.source)), ['kg'])
+      await modal.getByText(labels.loading, { exact: true }).waitFor()
+      await page.evaluate(() => window.__finishSource.kg())
+      await preview.waitFor()
+      await page.waitForFunction(() => window.__toggleRequests.length === 5)
+      assert.deepEqual(await page.evaluate(() => window.__toggleRequests.map(request => request.source)), ['kg', 'kw', 'tx', 'wy', 'mg'])
+      assert.equal(await page.evaluate(() => window.__toggleRequests.slice(1).every(request => request.preferredRendered)), true)
+      assert.equal(await page.evaluate(() => window.__toggleModal.proxy.loading), false)
       assert.equal(await modal.getByRole('button', { name: labels.otherPreview, exact: true }).count(), 0)
       assert.equal(await confirm.isDisabled(), true)
       assert.equal(await page.evaluate(() => window.__toggleList.setupState.selectedToggleMusicInfo.id), original.id)
+    })
+
+    await t.test('empty and failed platforms retain their tabs and late results do not change the selected platform', async() => {
+      const tabs = await page.evaluate(() => window.__toggleModal.proxy.tabs)
+      await modal.getByRole('tab', { name: tabs.find(tab => tab.id === 'mg').label, exact: true }).click()
+      await modal.getByText(labels.loading, { exact: true }).waitFor()
+      await page.evaluate(() => {
+        for (const source of ['kw', 'tx', 'wy', 'mg']) window.__finishSource[source](source === 'tx')
+      })
+      await modal.getByText(labels.empty, { exact: true }).waitFor()
+      assert.equal(await page.evaluate(() => window.__toggleModal.proxy.source), 'mg')
+      for (const tab of tabs.filter(tab => tab.id !== 'kg')) {
+        await modal.getByRole('tab', { name: tab.label, exact: true }).click()
+        await modal.getByText(labels.empty, { exact: true }).waitFor()
+        assert.equal(await modal.getByRole('tab').count(), 5)
+        assert.equal(await confirm.isDisabled(), true)
+      }
+      await modal.getByRole('tab', { name: tabs.find(tab => tab.id === 'tx').label, exact: true }).click()
+      await modal.getByRole('button', { name: labels.retry, exact: true }).click()
+      await modal.getByText(labels.loading, { exact: true }).waitFor()
+      assert.deepEqual(await page.evaluate(() => window.__toggleRequests.map(request => request.source)), ['kg', 'kw', 'tx', 'wy', 'mg', 'tx'])
+      await page.evaluate(() => window.__finishSource.tx())
+      await modal.getByText(labels.empty, { exact: true }).waitFor()
+      assert.equal(await modal.getByRole('button', { name: labels.retry, exact: true }).count(), 0)
+      await modal.getByRole('tab', { name: tabs.find(tab => tab.id === 'kg').label, exact: true }).click()
+      await preview.waitFor()
     })
 
     for (const mode of ['history', 'random', 'singleLoop', 'listLoop']) {
@@ -86,6 +126,8 @@ test('source switching keeps the selected song through matching, preview and pla
     await t.test('changing the filter or source clears stale selection and shows the selected version duration', async() => {
       await modal.locator('label[for="music_toggle_only_matches"]').click()
       assert.equal(await confirm.isDisabled(), true)
+      assert.equal(await page.evaluate(() => window.__toggleModal.proxy.source), 'kg')
+      assert.equal(await modal.getByRole('tab').count(), 5)
       await preview.click()
       const kwTab = await page.evaluate(() => window.__toggleModal.proxy.tabs.find(tab => tab.id === 'kw').label)
       await modal.getByRole('tab', { name: kwTab, exact: true }).click()

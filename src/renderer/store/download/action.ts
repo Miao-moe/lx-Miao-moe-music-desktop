@@ -17,6 +17,16 @@ import { arrPush, arrUnshift, joinPath } from '@renderer/utils'
 import { DOWNLOAD_STATUS } from '@common/constants'
 import { proxy } from '../index'
 import { buildSavePath } from './utils'
+import showToast from '@renderer/plugins/Toast'
+
+let downloadSyncLocked = false
+let downloadMutations = 0
+let pendingTaskUpdate: Promise<unknown> = Promise.resolve()
+const checkDownloadSyncLock = () => {
+  if (!downloadSyncLocked) return false
+  showToast(window.i18n.t('setting__sync_webdav_error_busy'))
+  return true
+}
 
 const waitingUpdateTasks = new Map<string, LX.Download.ListItem>()
 let timer: NodeJS.Timeout | null = null
@@ -25,33 +35,67 @@ const throttleUpdateTask = (tasks: LX.Download.ListItem[]) => {
   if (timer) return
   timer = setTimeout(() => {
     timer = null
-    void downloadTasksUpdate(Array.from(waitingUpdateTasks.values()))
+    pendingTaskUpdate = downloadTasksUpdate(Array.from(waitingUpdateTasks.values()))
+    void pendingTaskUpdate.catch(console.error)
     waitingUpdateTasks.clear()
   }, 100)
 }
 
 const runingTask = new Map<string, LX.Download.ListItem>()
+let loadingDownloadList: Promise<LX.Download.ListItem[]> | null = null
+
+const prepareDownloadList = (list: LX.Download.ListItem[]) => {
+  for (const downloadInfo of list) {
+    markRaw(downloadInfo.metadata)
+    if (downloadInfo.status == DOWNLOAD_STATUS.RUN || downloadInfo.status == DOWNLOAD_STATUS.WAITING) downloadInfo.status = DOWNLOAD_STATUS.PAUSE
+    if (downloadInfo.status == DOWNLOAD_STATUS.PAUSE) downloadInfo.statusText = window.i18n.t('download___status_paused')
+    if (downloadInfo.status == DOWNLOAD_STATUS.COMPLETED) downloadInfo.statusText = window.i18n.t('download___status_completed')
+  }
+  return list
+}
+
+/** Keep worker writes and UI task actions outside a WebDAV restore. */
+export const withDownloadListSync = async<T>(action: () => Promise<T>): Promise<T> => {
+  if (downloadSyncLocked || downloadMutations) throw new Error('downloads_running')
+  downloadSyncLocked = true
+  let ready = false
+  try {
+    await getDownloadList()
+    if (runingTask.size || downloadList.some(task => task.status == DOWNLOAD_STATUS.RUN || task.status == DOWNLOAD_STATUS.WAITING)) throw new Error('downloads_running')
+    if (timer) clearTimeout(timer)
+    timer = null
+    await pendingTaskUpdate
+    waitingUpdateTasks.clear()
+    await downloadTasksUpdate(downloadList.map(task => toRaw(task)))
+    ready = true
+    return await action()
+  } finally {
+    try {
+      if (ready) {
+        const list = prepareDownloadList(await downloadTasksGet())
+        downloadList.splice(0, downloadList.length)
+        arrPush(downloadList, list)
+        window.app_event.downloadListUpdate()
+      }
+    } finally {
+      // eslint-disable-next-line require-atomic-updates -- This operation exclusively owns the download sync lock.
+      downloadSyncLocked = false
+    }
+  }
+}
 
 // const initDownloadList = (list: LX.Download.ListItem[]) => {
 //   downloadList.splice(0, downloadList.length, ...list)
 // }
 
 export const getDownloadList = async(): Promise<LX.Download.ListItem[]> => {
-  if (!downloadList.length) {
-    const list = await downloadTasksGet()
-    for (const downloadInfo of list) {
-      markRaw(downloadInfo.metadata)
-      switch (downloadInfo.status) {
-        case DOWNLOAD_STATUS.RUN:
-        case DOWNLOAD_STATUS.WAITING:
-          downloadInfo.status = DOWNLOAD_STATUS.PAUSE
-          downloadInfo.statusText = window.i18n.t('download___status_paused')
-        default:
-          break
-      }
-    }
-    arrPush(downloadList, list)
+  if (!downloadList.length && !loadingDownloadList) {
+    loadingDownloadList = downloadTasksGet().then(list => {
+      arrPush(downloadList, prepareDownloadList(list))
+      return downloadList
+    }).finally(() => { loadingDownloadList = null })
   }
+  if (loadingDownloadList) await loadingDownloadList
   return downloadList
 }
 
@@ -326,6 +370,7 @@ const getStartTask = (list: LX.Download.ListItem[]): LX.Download.ListItem | null
 }
 
 const checkStartTask = async() => {
+  if (downloadSyncLocked) return
   if (runingTask.size >= appSetting['download.maxDownloadNum']) return
   let result = getStartTask(downloadList)
   // console.log(result)
@@ -355,14 +400,16 @@ const filterTask = (list: LX.Download.ListItem[]) => {
  * @param quality 下载音质
  */
 export const createDownloadTasks = async(list: LX.Music.MusicInfoOnline[], quality: LX.Quality, listId?: string) => {
-  if (!list.length) return
-  const tasks = filterTask(await window.lx.worker.download.createDownloadTasks(list, quality,
-    appSetting['download.fileName'],
-    toRaw(qualityList.value), listId),
-  )
-
-  if (tasks.length) await addTasks(tasks)
-  void checkStartTask()
+  if (!list.length || checkDownloadSyncLock()) return
+  downloadMutations++
+  try {
+    const tasks = filterTask(await window.lx.worker.download.createDownloadTasks(list, quality,
+      appSetting['download.fileName'],
+      toRaw(qualityList.value), listId),
+    )
+    if (tasks.length) await addTasks(tasks)
+    void checkStartTask()
+  } finally { downloadMutations-- }
 }
 
 /**
@@ -370,6 +417,7 @@ export const createDownloadTasks = async(list: LX.Music.MusicInfoOnline[], quali
  * @param list
  */
 export const startDownloadTasks = async(list: LX.Download.ListItem[]) => {
+  if (checkDownloadSyncLock()) return
   for (const downloadInfo of list) {
     switch (downloadInfo.status) {
       case DOWNLOAD_STATUS.PAUSE:
@@ -388,6 +436,7 @@ export const startDownloadTasks = async(list: LX.Download.ListItem[]) => {
  * @param list
  */
 export const pauseDownloadTasks = async(list: LX.Download.ListItem[]) => {
+  if (checkDownloadSyncLock()) return
   for (const downloadInfo of list) {
     switch (downloadInfo.status) {
       case DOWNLOAD_STATUS.RUN:
@@ -408,20 +457,24 @@ export const pauseDownloadTasks = async(list: LX.Download.ListItem[]) => {
  * @param ids 要移除的任务Id
  */
 export const removeDownloadTasks = async(ids: string[]) => {
-  await downloadTasksRemove(ids)
+  if (checkDownloadSyncLock()) return
+  downloadMutations++
+  try {
+    await downloadTasksRemove(ids)
 
-  const idsSet = new Set<string>(ids)
-  const newList = downloadList.filter(task => {
-    if (runingTask.has(task.id)) {
-      void window.lx.worker.download.removeTask(task.id)
-      runingTask.delete(task.id)
-    }
-    return !idsSet.has(task.id)
-  })
-  downloadList.splice(0, downloadList.length)
-  arrPush(downloadList, newList)
+    const idsSet = new Set<string>(ids)
+    const newList = downloadList.filter(task => {
+      if (idsSet.has(task.id) && runingTask.has(task.id)) {
+        void window.lx.worker.download.removeTask(task.id)
+        runingTask.delete(task.id)
+      }
+      return !idsSet.has(task.id)
+    })
+    downloadList.splice(0, downloadList.length)
+    arrPush(downloadList, newList)
 
 
-  void checkStartTask()
-  window.app_event.downloadListUpdate()
+    void checkStartTask()
+    window.app_event.downloadListUpdate()
+  } finally { downloadMutations-- }
 }

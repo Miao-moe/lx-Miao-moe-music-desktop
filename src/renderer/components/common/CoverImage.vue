@@ -6,7 +6,7 @@
 import { inject, type PropType } from 'vue'
 import { nextTick, ref, watch, onMounted, onBeforeUnmount } from '@common/utils/vueTools'
 import { getCoverThumbnail } from '@renderer/utils/coverThumbnail'
-import { acquireCover } from '@renderer/utils/coverCache'
+import { acquireCover, acquireMusicCover } from '@renderer/utils/coverCache'
 import { getMusicCoverUrl } from '@renderer/utils/musicCover'
 import { listLoadingKey } from '@renderer/utils/compositions/useListLoading'
 
@@ -53,7 +53,7 @@ const load = async() => {
     if (current !== generation) return
     if (!url) throw new Error('No artwork URL')
     const thumbnail = getCoverThumbnail(url, props.size * Math.max(1, window.devicePixelRatio))
-    const cover = await acquireCover(thumbnail, url)
+    const cover = await (props.musicInfo ? acquireMusicCover(url) : acquireCover(thumbnail, url))
     if (current !== generation) { cover.release(); return }
     // The generation check above prevents an old request from replacing this lease.
     // eslint-disable-next-line require-atomic-updates

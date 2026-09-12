@@ -18,6 +18,7 @@ import {
   updateMusicInfoOrder,
   updateMusicInfos,
   updateUserLists as updateUserListsFromDB,
+  getMusicInfoOrder,
 } from './dbHelper'
 
 let userLists: LX.DBService.UserListInfo[]
@@ -55,10 +56,12 @@ export const getAllUserList = (): LX.List.UserListInfo[] => {
 export const createUserLists = (position: number, lists: LX.List.UserListInfo[]) => {
   userLists ??= queryAllUserList()
   if (position < 0 || position >= userLists.length) {
+    // 删除列表后 position 可能不连续，追加时使用数据库中的末尾位置。
+    const order = userLists.length ? userLists.at(-1)!.position + 1 : 0
     const newLists: LX.DBService.UserListInfo[] = lists.map((list, index) => {
       return {
         ...list,
-        position: position + index,
+        position: order + index,
       }
     })
     insertUserLists(newLists)
@@ -210,10 +213,12 @@ export const musicsAdd = (listId: string, musicInfos: LX.Music.MusicInfo[], addM
       arrUnshift(targetList, musicInfos)
       break
     case 'bottom':
-    default:
-      insertMusicInfoList(toDBMusicInfo(musicInfos, listId, targetList.length))
+    default: {
+      const order = targetList.length ? (getMusicInfoOrder(listId, targetList.at(-1)!.id)?.order ?? targetList.length) + 1 : 0
+      insertMusicInfoList(toDBMusicInfo(musicInfos, listId, order))
       arrPush(targetList, musicInfos)
       break
+    }
   }
 }
 
@@ -257,10 +262,12 @@ export const musicsMove = (fromId: string, toId: string, musicInfos: LX.Music.Mu
       arrUnshift(toList, musicInfos)
       break
     case 'bottom':
-    default:
-      moveMusicInfo(fromId, ids, toDBMusicInfo(musicInfos, toId, toList.length))
+    default: {
+      const order = toList.length ? (getMusicInfoOrder(toId, toList.at(-1)!.id)?.order ?? toList.length) + 1 : 0
+      moveMusicInfo(fromId, ids, toDBMusicInfo(musicInfos, toId, order))
       arrPush(toList, musicInfos)
       break
+    }
   }
 
   listSet = new Set<string>(ids)

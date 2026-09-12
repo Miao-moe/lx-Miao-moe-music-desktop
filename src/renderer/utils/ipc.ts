@@ -8,6 +8,9 @@ import type { WindowState } from '@common/config'
 
 type RemoveListener = () => void
 
+export const runWebDAV = async(operation: LX.WebDAV.Operation) => rendererInvoke<LX.WebDAV.Operation, LX.WebDAV.Result>(WIN_MAIN_RENDERER_EVENT_NAME.webdav_action, operation)
+export const getWebDAVLastResult = async() => rendererInvoke<LX.WebDAV.Result | null>(WIN_MAIN_RENDERER_EVENT_NAME.webdav_last_result)
+
 export const getSetting = async() => {
   return rendererInvoke<LX.AppSetting>(CMMON_EVENT_NAME.get_app_setting)
 }

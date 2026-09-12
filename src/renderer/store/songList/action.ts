@@ -109,6 +109,7 @@ export const getAndSetList = async(source: LX.OnlineSource, tabId: string, sortI
   }
   listInfo.noItemLabel = window.i18n.t('list__loading')
   listInfo.key = key
+  listInfo.list = []
   // clearList()
   let request: Promise<ListInfo> | undefined
   if (sortId == 'recommend') {
@@ -206,6 +207,8 @@ export const getAndSetListDetail = async(id: string, source: LX.OnlineSource, pa
 
   listDetailInfo.key = key
   listDetailInfo.noItemLabel = window.i18n.t('list__loading')
+  listDetailInfo.list = []
+  listDetailInfo.info = {}
 
   return getListDetail(id, source, page, isRefresh).then((result: ListDetailInfo) => {
     if (key != listDetailInfo.key) return

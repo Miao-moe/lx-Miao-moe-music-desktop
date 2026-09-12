@@ -12,7 +12,19 @@
         <h3 :title="entityDetailInfo.info.name">{{ entityDetailInfo.info.name }}</h3>
         <p v-if="entityDetailInfo.info.author" :class="$style.author" :title="entityDetailInfo.info.author">{{ entityDetailInfo.info.author }}</p>
         <p v-if="metaParts.length" :class="$style.meta">{{ metaParts.join(' · ') }}</p>
-        <p v-if="displayDesc" :class="$style.description" :title="displayDesc">{{ displayDesc }}</p>
+        <template v-if="displayDesc">
+          <p
+            id="entity-detail-description" ref="descriptionRef"
+            :class="[$style.description, { [$style.descriptionExpanded]: descriptionExpanded }]"
+            :tabindex="descriptionExpanded ? 0 : undefined"
+            @keydown.stop @keyup.stop
+          >{{ displayDesc }}</p>
+          <button
+            v-if="descriptionOverflow || descriptionExpanded" type="button" :class="$style.descriptionToggle"
+            :aria-expanded="descriptionExpanded" aria-controls="entity-detail-description"
+            @click="toggleDescription" @keydown.stop @keyup.stop
+          >{{ $t(descriptionExpanded ? 'entity_detail__collapse_description' : 'entity_detail__expand_description') }}</button>
+        </template>
       </div>
       <div :class="$style.actions">
         <base-btn :class="$style.action" :disabled="!entityDetailInfo.list.length" @click="handlePlayAll">{{ $t('list__play') }}</base-btn>
@@ -37,7 +49,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from '@common/utils/vueTools'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from '@common/utils/vueTools'
 import { useRoute, useRouter } from '@common/utils/vueRouter'
 import { sourceNames } from '@renderer/store'
 import { getAndSetEntityDetail, getAndSetEntityProfile } from '@renderer/store/entityDetail/action'
@@ -54,6 +66,9 @@ const router = useRouter()
 const listRef = ref<any>(null)
 const coverError = ref(false)
 const profileLoading = ref(false)
+const descriptionRef = ref<HTMLElement | null>(null)
+const descriptionExpanded = ref(false)
+const descriptionOverflow = ref(false)
 let loadGeneration = 0
 let profileRequest: { key: string, promise: Promise<void> } | undefined
 
@@ -82,6 +97,33 @@ const coverUrl = computed(() => type.value == 'singer'
 const displayDesc = computed(() => type.value == 'singer'
   ? pickText(entityProfileInfo.desc, entityDetailInfo.info.desc, summary.value.desc)
   : pickText(entityDetailInfo.info.desc, entityProfileInfo.desc, summary.value.desc))
+const updateDescriptionOverflow = () => {
+  const element = descriptionRef.value
+  if (!element?.clientWidth) {
+    descriptionOverflow.value = false
+    return
+  }
+  const style = getComputedStyle(element)
+  const collapsedHeight = parseFloat(style.lineHeight) * Number(style.getPropertyValue('--description-lines'))
+  descriptionOverflow.value = element.scrollHeight > collapsedHeight + 1
+}
+const descriptionObserver = new ResizeObserver(updateDescriptionOverflow)
+watch([descriptionRef, displayDesc], ([element]) => {
+  descriptionObserver.disconnect()
+  if (element) descriptionObserver.observe(element)
+  updateDescriptionOverflow()
+}, { flush: 'post' })
+watch([type, source, id], () => {
+  descriptionExpanded.value = false
+  descriptionRef.value?.scrollTo({ top: 0 })
+})
+onBeforeUnmount(() => {
+  descriptionObserver.disconnect()
+})
+const toggleDescription = () => {
+  descriptionExpanded.value = !descriptionExpanded.value
+  descriptionRef.value?.scrollTo({ top: 0 })
+}
 const metaParts = computed(() => {
   const parts: string[] = []
   if (type.value == 'singer') {
@@ -264,7 +306,42 @@ useKeyBack(handleBack)
 }
 
 .description {
-  .mixin-ellipsis(2);
+  --description-lines: 2;
+  display: -webkit-box;
+  overflow: hidden;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--description-lines);
+
+  &.descriptionExpanded {
+    display: block;
+    max-height: min(240px, 32vh);
+    overflow-y: auto;
+    -webkit-line-clamp: unset;
+  }
+}
+
+.descriptionToggle {
+  align-self: flex-start;
+  flex: none;
+  padding: 3px 0;
+  border: none;
+  background: none;
+  color: var(--color-primary);
+  font-size: 12px;
+  line-height: 1.4;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+  &:focus-visible {
+    border-radius: var(--radius-sm);
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
 }
 
 .actions {
@@ -312,7 +389,7 @@ useKeyBack(handleBack)
   }
 
   .description {
-    -webkit-line-clamp: 1;
+    --description-lines: 1;
   }
 }
 </style>

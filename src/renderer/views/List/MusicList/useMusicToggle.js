@@ -2,12 +2,14 @@ import { ref, nextTick } from '@common/utils/vueTools'
 import { replaceListMusic } from '@renderer/store/list/listManage'
 import { playListById } from '@renderer/core/player'
 import { playMusicInfo } from '@renderer/store/player/state'
+import { userLists } from '@renderer/store/list/state'
 import { dialog } from '@renderer/plugins/Dialog'
 import { useI18n } from '@renderer/plugins/i18n'
 
 export default (props, list) => {
   const isShowMusicToggleModal = ref(false)
   const musicInfo = ref(null)
+  const selectedToggleSource = ref('')
   const t = useI18n()
   let targetListId = null
   const changing = ref(false)
@@ -16,6 +18,7 @@ export default (props, list) => {
     musicInfo.value = list.value[index]
     if (!musicInfo.value) return
     targetListId = props.listId
+    selectedToggleSource.value = userLists.find(list => list.id === targetListId)?.source ?? musicInfo.value.source
     nextTick(() => {
       if (targetListId === props.listId) isShowMusicToggleModal.value = true
     })
@@ -49,6 +52,7 @@ export default (props, list) => {
   return {
     isShowMusicToggleModal,
     selectedToggleMusicInfo: musicInfo,
+    selectedToggleSource,
     handleShowMusicToggleModal,
     toggleSource,
   }

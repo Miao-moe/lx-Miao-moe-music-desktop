@@ -1,35 +1,21 @@
 <template>
-  <div :class="$style.download" :style="{ '--list-cover-size': `${appSetting['list.coverSize']}px` }">
+  <div :class="$style.download" :style="columnLayout.style">
     <div :class="$style.header">
       <base-tab v-model="activeTab" :class="$style.tab" :list="tabs" />
     </div>
     <common-list-loading :load-key="list" :loading="isLoading" :class="$style.content">
-      <div class="thead" :class="$style.thead">
-        <table>
-          <thead>
-            <tr>
-              <th class="num" style="width: 5%;">#</th>
-              <th class="no-select" :class="$style.coverHeader">{{ $t('music_cover') }}</th>
-              <th class="nobreak">{{ $t('music_name') }}</th>
-              <th class="nobreak" style="width: 17%;">{{ $t('download__progress') }}</th>
-              <th class="nobreak" style="width: 18%;">{{ $t('download__status') }}</th>
-              <th class="nobreak" style="width: 10%;">{{ $t('download__quality') }}</th>
-              <th class="nobreak" style="width: 13%;">{{ $t('action') }}</th>
-            </tr>
-          </thead>
-        </table>
-      </div>
+      <common-music-list-header :layout="columnLayout" />
       <div v-if="list.length" ref="dom_listContent" :class="$style.content">
         <base-virtualized-list
           ref="listRef" v-slot="{ item, index }" :list="list" key-name="id" :item-height="listItemHeight"
-          :overscan="10" container-class="scroll" content-class="list"
+          :overscan="10" container-class="scroll music-column-scroll" content-class="list"
         >
           <div
             class="list-item"
             :class="[{[$style.active]: playTaskId == item.id }, { selected: rightClickSelectedIndex == index }, { active: selectedList.includes(item) }]"
             @click="handleListItemClick($event, index)" @contextmenu="handleListItemRightClick($event, index)"
           >
-            <div class="list-item-cell no-select" :class="$style.num" style="flex: 0 0 5%;">
+            <div class="list-item-cell no-select" :class="$style.num" style="flex: 0 0 var(--music-column-index);" data-music-cell="index">
               <transition name="play-active">
                 <div v-if="playTaskId == item.id" :class="$style.playIcon">
                   <span class="playing-equalizer" :class="{ paused: !isPlay }" aria-hidden="true"><span /><span /><span /></span>
@@ -37,19 +23,19 @@
                 <div v-else class="num">{{ index + 1 }}</div>
               </transition>
             </div>
-            <div class="list-item-cell no-select" :class="$style.cover" style="flex: 0 0 calc(var(--list-cover-size) + 12px); padding: 0 6px;">
+            <div class="list-item-cell no-select" :class="$style.cover" style="flex: 0 0 var(--music-column-cover); padding: 0 6px;" data-music-cell="cover">
               <common-cover-image v-if="!coverErrorSet.has(getCoverKey(item))" :music-info="item.metadata.musicInfo" :size="appSetting['list.coverSize']" alt="" @error="handleCoverError(item)" />
               <svg v-else version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" width="60%" height="60%" viewBox="0 0 24 24" space="preserve">
                 <use xlink:href="#icon-music" />
               </svg>
             </div>
-            <div class="list-item-cell auto name">
+            <div class="list-item-cell name" style="flex: 0 0 var(--music-column-name);" data-music-cell="name">
               <span class="select name" :aria-label="getName(item)">{{ getName(item) }}</span>
             </div>
-            <div class="list-item-cell" style="flex: 0 0 17%;">{{ item.progress }}%<span v-if="item.status == downloadStatus.RUN && item.speed"> - {{ item.speed }}/s</span></div>
-            <div class="list-item-cell" style="flex: 0 0 18%;" :aria-label="item.statusText">{{ item.statusText }}</div>
-            <div class="list-item-cell" style="flex: 0 0 10%;">{{ getTypeName(item.metadata.quality) }}</div>
-            <div class="list-item-cell" style="flex: 0 0 13%; padding-left: 0; padding-right: 0;">
+            <div class="list-item-cell" style="flex: 0 0 var(--music-column-progress);" data-music-cell="progress">{{ item.progress }}%<span v-if="item.status == downloadStatus.RUN && item.speed"> - {{ item.speed }}/s</span></div>
+            <div class="list-item-cell" style="flex: 0 0 var(--music-column-status);" :aria-label="item.statusText" data-music-cell="status">{{ item.statusText }}</div>
+            <div class="list-item-cell" style="flex: 0 0 var(--music-column-quality);" data-music-cell="quality">{{ getTypeName(item.metadata.quality) }}</div>
+            <div class="list-item-cell" style="flex: 0 0 var(--music-column-action); padding-left: 0; padding-right: 0;" data-music-cell="action">
               <material-list-buttons
                 :index="index" :download-btn="false" :file-btn="item.status != downloadStatus.ERROR" remove-btn="remove-btn"
                 :start-btn="!item.isComplate && item.status != downloadStatus.WAITING && (item.status != downloadStatus.RUN)"
@@ -86,12 +72,14 @@ import useTaskActions from './useTaskActions'
 import useMusicAdd from './useMusicAdd'
 import { downloadStatus } from '@renderer/store/download/state'
 import { appSetting } from '@renderer/store/setting'
+import useMusicListColumns from '@renderer/utils/compositions/useMusicListColumns'
 import { isPlay } from '@renderer/store/player/state'
 import { formatMusicName } from '@renderer/utils'
 
 export default {
   name: 'Download',
   setup() {
+    const columnLayout = useMusicListColumns('download')
     const listRef = ref()
     const { tabs, activeTab } = useTab()
 
@@ -237,6 +225,7 @@ export default {
       }
     }
     return {
+      columnLayout,
       listRef,
       list,
       downloadStatus,
@@ -315,11 +304,6 @@ export default {
   opacity: .7;
 }
 
-.coverHeader {
-  width: calc(var(--list-cover-size) + 12px);
-  box-sizing: border-box;
-  text-align: center;
-}
 
 .cover {
   height: 100%;

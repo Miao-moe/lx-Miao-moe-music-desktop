@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict')
 const http = require('node:http')
+const path = require('node:path')
 const { test } = require('node:test')
 const { launch, route, settled } = require('./helpers/motion-fixture.cjs')
 
@@ -7,13 +8,17 @@ const artwork = size => `<svg xmlns="http://www.w3.org/2000/svg" width="${size}"
 const seedList = (page, urls) => page.evaluate(urls => {
   const component = window.__motionComponents().find(c => c.type.name === 'MusicList' && 'list' in c.setupState)
   component.setupState.list = urls.map((url, i) => ({
-    id: `cover-check-${i}`, source: 'wy', name: `Cover ${i}`, singer: 'Fixture', interval: '03:40',
+    id: `cover-check-${i}`,
+    source: 'wy',
+    name: `Cover ${i}`,
+    singer: 'Fixture',
+    interval: '03:40',
     meta: { picUrl: url, albumName: 'Fixture', songId: String(i), qualitys: [], _qualitys: {} },
   }))
 }, urls)
 
 test('small artwork loads promptly, falls back and reuses the artwork cache', { timeout: 45000 }, async t => {
-  const { app, page, errors } = await launch()
+  const { app, page, errors } = await launch({ rendererPath: path.resolve('dist/index.html') })
   let cachedRequests = 0
   const server = http.createServer((req, res) => {
     cachedRequests++
@@ -27,13 +32,13 @@ test('small artwork loads promptly, falls back and reuses the artwork cache', { 
       requests.push(url.href)
       const thumbnail = url.searchParams.has('param')
       const missing = url.pathname.endsWith('/missing.jpg') || (url.pathname.endsWith('/fallback.jpg') && thumbnail)
-      await request.fulfill({ status: missing ? 404 : 200, contentType: 'image/svg+xml', body: missing ? '' : artwork(thumbnail ? 96 : 1400) })
+      await request.fulfill({ status: missing ? 404 : 200, contentType: 'image/svg+xml', body: missing ? '' : artwork(thumbnail ? 640 : 1400) })
     })
     await route(page, '/list')
     await settled(page)
     const urls = Array.from({ length: 1000 }, (_, i) => `https://p1.music.126.net/lx-cover-check/${i}.jpg`)
 
-    await t.test('only the virtualized rows request eager thumbnails', async() => {
+    await t.test('only virtualized rows request artwork that can also serve the player', async() => {
       await seedList(page, urls)
       await page.waitForFunction(() => {
         const images = Array.from(document.querySelectorAll('#view [data-cover-image]'))
@@ -43,9 +48,9 @@ test('small artwork loads promptly, falls back and reuses the artwork cache', { 
         size: image.naturalWidth, loading: image.loading, width: image.clientWidth,
       })))
       assert.ok(images.length < 70, 'the full 1,000-song playlist is not loaded')
-      assert.ok(images.every(image => image.size === 96 && image.loading === 'eager' && image.width > 0))
+      assert.ok(images.every(image => image.size === 640 && image.loading === 'eager' && image.width > 0))
       assert.ok(requests.length < 70)
-      assert.ok(requests.every(url => new URL(url).searchParams.get('param') === '96y96'))
+      assert.ok(requests.every(url => new URL(url).searchParams.get('param') === '640y640'))
       assert.equal(await page.evaluate(() => window.__motionComponents().find(c => c.type.name === 'MusicList').setupState.list[0].meta.picUrl), urls[0])
     })
 
@@ -54,10 +59,10 @@ test('small artwork loads promptly, falls back and reuses the artwork cache', { 
       await seedList(page, [fallback])
       await page.waitForFunction(() => document.querySelector('#view [data-cover-image]')?.naturalWidth === 1400)
       assert.match(await page.locator('#view [data-cover-image]').getAttribute('src'), /^blob:/)
-      assert.deepEqual(requests.filter(url => url.includes('/fallback.jpg')), [fallback + '?param=96y96', fallback])
+      assert.deepEqual(requests.filter(url => url.includes('/fallback.jpg')), [fallback + '?param=640y640', fallback])
       // Virtualized rows may reuse their component for a different song.
       await seedList(page, [urls[1]])
-      await page.waitForFunction(() => document.querySelector('#view [data-cover-image]')?.naturalWidth === 96)
+      await page.waitForFunction(() => document.querySelector('#view [data-cover-image]')?.naturalWidth === 640)
       assert.match(await page.locator('#view [data-cover-image]').getAttribute('src'), /^blob:/)
       await seedList(page, [fallback])
       await page.waitForFunction(() => document.querySelector('#view [data-cover-image]')?.naturalWidth === 1400)
@@ -68,7 +73,7 @@ test('small artwork loads promptly, falls back and reuses the artwork cache', { 
       const missing = 'https://p1.music.126.net/lx-cover-check/missing.jpg'
       await seedList(page, [missing])
       await page.waitForFunction(() => !document.querySelector('#view [data-cover-image]'))
-      assert.deepEqual(requests.filter(url => url.includes('/missing.jpg')), [missing + '?param=96y96', missing])
+      assert.deepEqual(requests.filter(url => url.includes('/missing.jpg')), [missing + '?param=640y640', missing])
     })
 
     await t.test('returning to a loaded cover avoids another network transfer', async() => {

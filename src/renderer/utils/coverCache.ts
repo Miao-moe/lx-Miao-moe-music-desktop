@@ -1,4 +1,5 @@
 import { artworkCacheGeneration, onArtworkCacheCleared, readArtworkCache, writeArtworkCache } from './artworkStorage'
+import { getCoverThumbnail } from './coverThumbnail'
 
 interface CachedImage { src: string, bytes: number, users: number, retired: boolean }
 const images = new Map<string, CachedImage>()
@@ -96,9 +97,7 @@ const getImage = async(url: string, fallbackUrl?: string) => {
 }
 
 // Each mounted image leases its URL. Eviction never revokes an image still on screen.
-export const acquireCover = async(url: string, fallbackUrl?: string) => {
-  if (!/^https?:\/\//i.test(url)) return { src: url, release: () => {} }
-  const image = await getImage(url, fallbackUrl)
+const leaseImage = (url: string, image: CachedImage) => {
   image.users++
   if (!image.retired) {
     images.delete(url)
@@ -116,4 +115,20 @@ export const acquireCover = async(url: string, fallbackUrl?: string) => {
       trimMemory()
     },
   }
+}
+
+export const acquireCover = async(url: string, fallbackUrl?: string) => {
+  if (!/^https?:\/\//i.test(url)) return { src: url, release: () => {} }
+  return leaseImage(url, await getImage(url, fallbackUrl))
+}
+
+// Song rows and every player surface use the same detail-sized artwork. Display
+// dimensions must not produce separate downloads or enlarge a tiny list thumbnail.
+const musicCoverUrl = (url: string) => getCoverThumbnail(url, 640)
+export const acquireMusicCover = async(url: string) => acquireCover(musicCoverUrl(url), url)
+export const acquireCachedMusicCover = (url: string) => {
+  if (!/^https?:\/\//i.test(url)) return { src: url, release: () => {} }
+  const key = musicCoverUrl(url)
+  const image = images.get(key)
+  return image ? leaseImage(key, image) : undefined
 }

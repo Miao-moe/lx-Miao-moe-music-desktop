@@ -1,11 +1,12 @@
 import path from 'node:path'
 import os from 'node:os'
+import { DEFAULT_SIDEBAR_ORDER } from './sidebar'
 
 const isMac = process.platform == 'darwin'
 const isWin = process.platform == 'win32'
 
 const defaultSetting: LX.AppSetting = {
-  version: '2.1.0',
+  version: '2.2.0',
 
   'common.windowSizeId': 3,
   'common.fontSize': 16,
@@ -67,7 +68,7 @@ const defaultSetting: LX.AppSetting = {
   'player.soundEffect.pitchShifter.playbackRate': 1,
 
   'playDetail.isZoomActiveLrc': false,
-  'playDetail.isShowLyricProgressSetting': false,
+  'playDetail.isShowLyricProgressSetting': true,
   'playDetail.style.fontSize': 140,
   'playDetail.style.align': 'center',
   'playDetail.isDelayScroll': true,
@@ -111,6 +112,7 @@ const defaultSetting: LX.AppSetting = {
   'list.addMusicLocationType': 'top',
   'list.actionButtonsVisible': false,
   'list.coverSize': 28,
+  'list.columnWidths': '{}',
   'list.loadingMode': 'together',
 
   'download.enable': false,
@@ -149,6 +151,19 @@ const defaultSetting: LX.AppSetting = {
   'sync.server.maxSsnapshotNum': 5,
   'sync.client.host': '',
 
+  'sync.webdav.enable': false,
+  'sync.webdav.url': '',
+  'sync.webdav.username': '',
+  'sync.webdav.password': '',
+  'sync.webdav.directory': 'lx-music',
+  'sync.webdav.autoSync': false,
+  'sync.webdav.interval': 5,
+  'sync.webdav.playlists': true,
+  'sync.webdav.downloadHistory': false,
+  'sync.webdav.downloadTasks': false,
+  'sync.webdav.settings': false,
+  'sync.webdav.dislike': false,
+
   'openAPI.enable': false,
   'openAPI.port': '23330',
   'openAPI.bindLan': false,
@@ -175,6 +190,17 @@ const defaultSetting: LX.AppSetting = {
   'ui.smoothAnimation': true,
   'ui.followSystemMotion': false,
   'ui.animationSpeed': 1.0,
+  'ui.sidebar.width': 0,
+  'ui.sidebar.locked': false,
+  'ui.sidebar.order': DEFAULT_SIDEBAR_ORDER,
+  'ui.sidebar.showSearch': true,
+  'ui.sidebar.showSongList': true,
+  'ui.sidebar.showLeaderboard': true,
+  'ui.sidebar.showList': true,
+  'ui.myListSidebar.width': 0,
+  'ui.myListSidebar.collapsed': false,
+  'ui.leaderboardSidebar.width': 0,
+  'ui.leaderboardSidebar.collapsed': false,
 
   // ===== 播放增强 =====
   'player.gaplessPlayback': true,

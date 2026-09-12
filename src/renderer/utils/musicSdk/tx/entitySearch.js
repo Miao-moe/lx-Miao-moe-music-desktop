@@ -103,7 +103,7 @@ export default {
     if (!list.length) {
       const exists = new Set()
       list = await musicSearch.musicSearch(str, 1, 50, 0, 0).then((data) => {
-        const songs = data?.body?.item_song ?? []
+        const songs = data?.body?.song?.list ?? data?.body?.item_song ?? []
         return type == 'singer' ? collectSingersFromSongs(songs, exists) : collectAlbumsFromSongs(songs, exists)
       })
     }

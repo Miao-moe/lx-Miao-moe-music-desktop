@@ -403,6 +403,8 @@ export const listenerAppEvent = (startApp: () => void) => {
   })
   global.lx.event_app.on('app_inited', () => {
     setProxy()
+    global.lx.event_app.player_status({ volume: Math.trunc(global.lx.appSetting['player.volume'] * 100) })
+    global.lx.event_app.player_status({ mute: global.lx.appSetting['player.isMute'] })
   })
 }
 

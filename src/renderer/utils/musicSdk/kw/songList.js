@@ -145,11 +145,10 @@ export default {
     }))
   },
   filterList2(rawData) {
-    // console.log(rawData)
     const list = []
+    const allowedTypes = ['songlist', 'list', 'album']
     rawData.forEach(item => {
-      if (!item.label) return
-      list.push(...item.list.map(item => ({
+      list.push(...(item.list ?? []).filter(item => allowedTypes.includes(item.type)).map(item => ({
         play_count: item.play_count && this.formatPlayCount(item.listencnt),
         id: `digest-${item.digest}__${item.id}`,
         author: item.uname,

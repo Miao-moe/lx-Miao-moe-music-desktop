@@ -22,8 +22,7 @@ function fixture(respond, cookieOverrides = {}) {
     '../cookieManager': manager,
     '@renderer/utils': { deduplicationList: items => items, toNewMusicInfo: item => item },
     '@renderer/utils/musicSdk': {},
-    '@renderer/utils/musicSdk/wy/utils/crypto': { linuxapi: data => data },
-    '../musicSdk/wy/utils/crypto': { weapi: data => data },
+    '@renderer/utils/musicSdk/wy/utils/crypto': { eapi: (url, params) => ({ url, params }) },
     '@renderer/utils/musicSdk/utils': { toMD5: md5 },
     '../ipc': { updateSetting: async settings => { Object.assign(appSetting, settings) } },
     '@renderer/utils/request': {
@@ -41,20 +40,41 @@ const wyRead = (options, overrides = {}) => {
   if (options.form.url.endsWith('/account/get')) return response({ code: 200, account: { id: 7 } })
   return response({ code: 200, playlist: { name: 'My list', creator: { userId: 7 }, specialType: 0, trackCount: 2, trackIds: [{ id: 11 }, { id: 12 }], ...overrides } })
 }
+const isWyRead = url => url.endsWith('/account/get') || url.endsWith('/playlist/detail')
+
+test('NetEase client cookies can enable writeback when the web and Linux APIs report no account', async() => {
+  const { open, requests } = fixture((url, options) => {
+    if (url.endsWith('/api/linux/forward')) return response({ code: 200, account: null, profile: null })
+    if (url.includes('/weapi/')) return response({ code: 301 })
+    assert.equal(new URL(url).origin, 'https://interfacepc.music.163.com')
+    assert.equal(options.form.params.header.MUSIC_U, 'test-session')
+    return wyRead(options)
+  })
+  const session = await open('wy')
+  assert.equal(session.ownerId, '7')
+  assert.equal((await session.read()).tracks.length, 2)
+  assert(requests.every(({ url }) => url.endsWith('/account/get') || url.endsWith('/playlist/detail')))
+})
 
 test('NetEase writes use playlist IDs, encrypted payloads and full track identifiers', async() => {
-  const { open, requests } = fixture((url, options) => url.endsWith('/api/linux/forward') ? wyRead(options) : response({ code: 200 }))
+  const { open, requests } = fixture((url, options) => isWyRead(url) ? wyRead(options) : response({ code: 200 }))
   const session = await open('wy')
   await session.add([{ key: '13' }])
   await session.remove([{ key: '11' }])
   await session.rename('Renamed')
   await session.order(['12', '13'])
-  const writes = requests.filter(({ url }) => url.includes('/weapi'))
-  assert.deepEqual(writes.map(({ options }) => options.form.op), ['add', 'del', undefined, 'update'])
-  assert.equal(writes[0].options.form.pid, '123')
-  assert.deepEqual(JSON.parse(writes[0].options.form.trackIds), ['13'])
-  assert.equal(writes[0].options.form.csrf_token, 'test-csrf')
-  assert.equal(writes[2].options.form.name, 'Renamed')
+  const writes = requests.filter(({ url }) => !isWyRead(url))
+  assert.deepEqual(writes.map(({ options }) => options.form.params.op), ['add', 'del', undefined, 'update'])
+  assert.equal(writes[0].options.form.params.pid, '123')
+  assert.deepEqual(JSON.parse(writes[0].options.form.params.trackIds), ['13'])
+  assert.equal(writes[2].options.form.params.name, 'Renamed')
+  for (const { url, options } of requests) {
+    assert.equal(new URL(url).origin, 'https://interfacepc.music.163.com')
+    assert.equal(new URL(url).pathname, options.form.url.replace('/api/', '/eapi/'))
+    assert.equal(options.form.params.header.MUSIC_U, 'test-session')
+    assert.equal(options.form.params.header.__csrf, 'test-csrf')
+    assert(options.headers.Cookie.includes('MUSIC_U=test-session'))
+  }
   assert.deepEqual(session.capabilities, { rename: true, order: true })
 })
 
@@ -66,14 +86,14 @@ test('ownership, special playlists and incomplete snapshots fail before writes',
   ]) {
     const { open, requests } = fixture((_url, options) => wyRead(options, overrides))
     await assert.rejects(open('wy'), error => error.code === code)
-    assert(requests.every(({ url }) => url.endsWith('/api/linux/forward')))
+    assert(requests.every(({ url }) => isWyRead(url)))
   }
 })
 
 test('all identifiers are validated before the first batch; expired sessions stop subsequent batches', async() => {
   let writes = 0
   const { open, requests, appSetting } = fixture((url, options) => {
-    if (url.endsWith('/api/linux/forward')) return wyRead(options)
+    if (isWyRead(url)) return wyRead(options)
     writes++
     appSetting['cookie.wy'] = 'MUSIC_U=another-account'
     return response({ code: 200 })
@@ -84,7 +104,28 @@ test('all identifiers are validated before the first batch; expired sessions sto
   assert.equal(writes, 0)
   await assert.rejects(session.add(tracks), error => error.code === 'login')
   assert.equal(writes, 1)
-  assert.equal(JSON.parse(requests.at(-1).options.form.trackIds).length, 100)
+  assert.equal(JSON.parse(requests.at(-1).options.form.params.trackIds).length, 100)
+})
+
+test('NetEase server-side login expiry stops writes and does not become an empty account', async() => {
+  for (const body of [{ code: 301 }, { code: 200, account: null, profile: null }]) {
+    const { open, requests } = fixture(() => response(body))
+    await assert.rejects(open('wy'), error => error.code === 'login')
+    assert.equal(requests.length, 1)
+  }
+  const { open, requests } = fixture((url, options) => isWyRead(url) ? wyRead(options) : response({ code: 301 }))
+  const session = await open('wy')
+  await assert.rejects(session.add(Array.from({ length: 105 }, (_, index) => ({ key: String(index + 1) }))), error => error.code === 'login')
+  assert.equal(requests.filter(({ url }) => !isWyRead(url)).length, 1)
+})
+
+test('changing the NetEase cookie during account verification prevents any subsequent request', async() => {
+  const { open, appSetting, requests } = fixture((_url, options) => {
+    appSetting['cookie.wy'] = 'MUSIC_U=another-account'
+    return wyRead(options)
+  })
+  await assert.rejects(open('wy'), error => error.code === 'login')
+  assert.equal(requests.length, 1)
 })
 
 test('QQ resolves the playlist directory and uses numeric song IDs rather than mids for writes', async() => {

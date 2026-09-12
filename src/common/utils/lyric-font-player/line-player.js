@@ -1,7 +1,7 @@
 import { getNow, TimeoutTools } from './utils'
 
-const timeFieldExp = /^(?:\[[\d:.]+\])+/g
-const timeExp = /\d{1,3}(:\d{1,3}){0,2}(?:\.\d{1,3})/g
+const timeFieldExp = /^(?:\[\d{1,3}(?::\d{1,3}){0,2}(?:\.\d{1,3})?])+/g
+const timeExp = /\d{1,3}(?::\d{1,3}){0,2}(?:\.\d{1,3})?/g
 const tagRegMap = {
   title: 'ti',
   artist: 'ar',
@@ -12,13 +12,10 @@ const tagRegMap = {
 
 const timeoutTools = new TimeoutTools()
 
-const t_rxp_1 = /^0+(\d+)/
-const t_rxp_2 = /:0+(\d+)/g
-const t_rxp_3 = /\.0+(\d+)/
 const formatTimeLabel = (label) => {
-  return label.replace(t_rxp_1, '$1')
-    .replace(t_rxp_2, ':$1')
-    .replace(t_rxp_3, '.$1')
+  const [seconds, fraction = '0'] = label.split('.')
+  // 保留小数前导零，并统一主歌词、翻译、罗马音的时间键。
+  return seconds.split(':').reduce((total, value) => total * 60 + parseInt(value), 0) * 1000 + parseInt(fraction.padEnd(3, '0'))
 }
 
 const parseExtendedLyric = (lrcLinesMap, extendedLyric) => {
@@ -99,13 +96,8 @@ export default class LinePlayer {
               linesMap[timeStr].extendedLyrics.push(text)
               continue
             }
-            const timeArr = timeStr.split(':')
-            if (timeArr.length > 3) continue
-            else if (timeArr.length < 3) for (let i = 3 - timeArr.length; i--;) timeArr.unshift('0')
-            if (timeArr[2].indexOf('.') > -1) timeArr.splice(2, 1, ...timeArr[2].split('.'))
-
             linesMap[timeStr] = {
-              time: parseInt(timeArr[0]) * 60 * 60 * 1000 + parseInt(timeArr[1]) * 60 * 1000 + parseInt(timeArr[2]) * 1000 + parseInt(timeArr[3] || 0),
+              time: timeStr,
               text,
               extendedLyrics: [],
             }

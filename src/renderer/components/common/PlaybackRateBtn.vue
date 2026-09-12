@@ -1,12 +1,12 @@
 <template>
   <material-popup-btn :class="$style.btnContent">
-    <button :class="[$style.btn, { [$style.active]: playbackRate != 1 }]" :aria-label="`${$t('player__playback_rate')}${playbackRate}x`">
+    <button :class="[$style.btn, { [$style.active]: playbackRate != 1 }]" :aria-label="`${$t('player__playback_rate')}${playbackRate}x`" @wheel.prevent="handleWheel">
       <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" width="100%" viewBox="0 0 24 24" space="preserve">
         <use xlink:href="#icon-plex" />
       </svg>
     </button>
     <template #content>
-      <div :class="$style.setting">
+      <div :class="$style.setting" @wheel.prevent="handleWheel">
         <div :class="$style.info">
           <span>{{ playbackRate.toFixed(2) }}x</span>
           <div :class="$style.control">
@@ -32,6 +32,12 @@ import { appSetting, updateSetting } from '@renderer/store/setting'
 
 const handleUpdatePlaybackRate = (val) => {
   window.app_event.setPlaybackRate(Math.round(val) / 100)
+}
+
+const handleWheel = (event) => {
+  if (event.deltaY == 0) return
+  const rate = Math.round(playbackRate.value * 100) + (event.deltaY > 0 ? -10 : 10)
+  handleUpdatePlaybackRate(Math.max(50, Math.min(200, rate)))
 }
 
 
