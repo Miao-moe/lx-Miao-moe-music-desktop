@@ -1,5 +1,6 @@
 import { createHttpFetch } from './util'
 import { filterSongList } from './singer'
+import { decodeName } from '../../index'
 
 export default {
   /**
@@ -26,9 +27,12 @@ export default {
     const albumList = await createHttpFetch(`http://mobiles.kugou.com/api/v3/album/song?version=9108&albumid=${id}&plat=0&pagesize=${limit}&area_code=0&page=${page}&with_res_tag=0`)
     if (!albumList.info) return Promise.reject(new Error('Get album list failed.'))
 
-    const result = filterSongList(albumList.info)
-
     const info = await this.getAlbumInfo(id).catch(() => null)
+    const albumName = decodeName(info?.name ?? '')
+    const result = filterSongList(albumList.info).map(song => ({
+      ...song,
+      albumName: song.albumName || albumName,
+    }))
 
     return {
       list: result,

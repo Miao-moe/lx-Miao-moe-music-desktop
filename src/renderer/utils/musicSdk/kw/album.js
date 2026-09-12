@@ -1,5 +1,5 @@
 import { httpFetch } from '../../request'
-import { decodeName } from '../../index'
+import { decodeName, formatPlayTime } from '../../index'
 import { formatSinger, objStr2JSON } from './util'
 
 // let requestObj_list
@@ -10,6 +10,7 @@ export default {
     // console.log(rawList)
     // console.log(rawList.length, rawList2.length)
     return rawList.map((item, inedx) => {
+      const duration = Number(item.duration)
       let formats = item.formats.split('|')
       let types = []
       let _types = {}
@@ -57,7 +58,7 @@ export default {
         albumId,
         songmid: item.id,
         source: 'kw',
-        interval: null,
+        interval: Number.isFinite(duration) && duration > 0 ? formatPlayTime(duration) : null,
         img: item.pic,
         lrc: null,
         otherSource: null,

@@ -43,5 +43,10 @@ const hidden = computed(() => !ready.value || (immediate.value && props.loading 
 .status {
   position: absolute;
   inset: 0;
+  display: flex;
+  flex-flow: column nowrap;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
 }
 </style>
